@@ -86,8 +86,3 @@ Consulta los siguientes recursos para mayor información sobre las tecnologías 
 
 ## **Contribuciones**
 Las contribuciones son bienvenidas. Si deseas contribuir, por favor abre un _issue_ o envía un _pull request_.
-
----
-
-## **Licencia**
-Este proyecto está bajo la licencia MIT. Consulta el archivo `LICENSE` para más detalles.
