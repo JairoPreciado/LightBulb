@@ -1,50 +1,72 @@
-# Welcome to your Expo app 👋
+Lightbulb: Proyecto IoT
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Lightbulb es un proyecto IoT diseñado para controlar un foco inteligente mediante un dispositivo Particle Photon y una aplicación móvil creada con React Native utilizando Expo. Este proyecto combina software, hardware y conectividad a Internet para ofrecer una experiencia eficiente de domótica.
+Características principales
 
-## Get started
+    Control remoto del foco:
+        Encendido y apagado del foco desde cualquier lugar con conexión a Internet.
+        Sincronización en tiempo real del estado del dispositivo.
+    Programación horaria:
+        Configuración de horarios automáticos para encendido y apagado.
+    Notificaciones:
+        Alertas a través de mensajes, correos electrónicos o notificaciones locales.
+    Estadísticas de consumo energético:
+        Consulta de historial detallado del consumo eléctrico.
+    Gestión de usuarios:
+        Sistema de registro e inicio de sesión con cuentas únicas.
+        Cada usuario gestiona únicamente sus dispositivos registrados.
+    Interfaz intuitiva:
+        Aplicación desarrollada con React Native Expo, compatible con dispositivos Android e iOS.
 
-1. Install dependencies
+Requisitos para ejecutar el proyecto
+Software necesario
 
-   ```bash
-   npm install
-   ```
+    Node.js (Recomendado: LTS).
+    Expo CLI (Instalar globalmente con el siguiente comando):
 
-2. Start the app
+    npm install -g expo-cli
 
-   ```bash
+    Aplicación móvil Expo Go instalada en tu dispositivo:
+        Descargar para Android
+        Descargar para iOS
+
+Hardware necesario
+
+    Dispositivo Particle Photon configurado y conectado a Internet.
+    Módulo relé para controlar el foco.
+
+Instrucciones para clonar y ejecutar el proyecto
+
+    Clona este repositorio en tu máquina local:
+
+git clone https://github.com/JairoPreciado/LightBulb.git
+cd LightBulb
+
+Instala las dependencias del proyecto:
+
+npm install
+
+Inicia la aplicación:
+
     npx expo start
-   ```
 
-In the output, you'll find options to open the app in a
+    Ejecuta la app en tu dispositivo móvil:
+        Escanea el código QR generado en tu terminal usando la app Expo Go.
+        También puedes usar un emulador de Android/iOS configurado en tu computadora.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Configuración adicional
+Configuración del hardware
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+    Conecta el Particle Photon a un módulo relé y asegúrate de que esté configurado en la nube de Particle.
+    Modifica los parámetros del dispositivo en el código de la app para sincronizar correctamente con tu Photon.
 
-## Get a fresh project
+Variables de entorno
 
-When you're ready, run:
+    Crea un archivo .env (si es necesario) para almacenar claves de API, tokens o configuraciones específicas.
 
-```bash
-npm run reset-project
-```
+Documentación adicional
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Consulta los siguientes recursos para mayor información sobre las tecnologías utilizadas:
 
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+    Documentación de Particle
+    Guía oficial de Expo
