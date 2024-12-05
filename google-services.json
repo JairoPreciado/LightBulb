@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "199233467868",
+    "project_id": "lightbulb-5fcc3",
+    "storage_bucket": "lightbulb-5fcc3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:199233467868:android:ceb64f8964e0a9c6114b19",
+        "android_client_info": {
+          "package_name": "com.LightBulb.NuevaApp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhT4o_tWW9S8B3XV44PQYFqvTdqaYV7Dk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
