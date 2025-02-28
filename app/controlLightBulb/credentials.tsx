@@ -16,6 +16,7 @@ const AddDevice = () => {
   const [expiresIn, setExpiresIn] = useState('15 minutes');
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [expirationDate, setExpirationDate] = useState<number | null>(null);
 
   // Validaciones
   const isPhotonIdValid = photonId.length === 24 && /^[0-9]+$/.test(photonId);
@@ -37,7 +38,7 @@ const AddDevice = () => {
     return expirationMap[value] || null;
   };
 
-  // Generar clave de acceso
+  // Generar clave de acceso y calcular la expiración
   const handleGenerateApiKey = async () => {
     setIsGeneratingKey(true);
     try {
@@ -48,6 +49,9 @@ const AddDevice = () => {
         setIsGeneratingKey(false);
         return;
       }
+
+      // Calcular la fecha de expiración en milisegundos (null si es "Never")
+      const expirationTimestamp = expiresValue === 0 ? null : Date.now() + expiresValue * 1000;
 
       const requestBody = `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}&grant_type=password&client_id=particle&client_secret=particle&expires_in=${expiresValue}`;
 
@@ -61,6 +65,7 @@ const AddDevice = () => {
 
       if (response.ok) {
         setApiKey(data.access_token);
+        setExpirationDate(expirationTimestamp);
         Alert.alert('Éxito', 'Clave generada correctamente.');
       } else {
         Alert.alert('Error', `No se pudo generar la clave: ${data.error_description}`);
@@ -72,7 +77,7 @@ const AddDevice = () => {
     }
   };
 
-  // Guardar en la base de datos
+  // Guardar en la base de datos (incluyendo la expiración)
   const handleSaveToDatabase = async () => {
     try {
       const userId = auth.currentUser?.uid;
@@ -83,7 +88,7 @@ const AddDevice = () => {
 
       await setDoc(
         doc(db, 'BD', userId),
-        { photonId, apiKey },
+        { photonId, apiKey, expiresAt: expirationDate },
         { merge: true }
       );
 
@@ -103,18 +108,40 @@ const AddDevice = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Agregar Nuevo Dispositivo</Text>
 
-      {!isPhotonIdValid && photonId.length > 0 && (<Text style={styles.errorText}>El ID debe tener 24 caracteres numéricos.</Text>)}
-      <TextInput style={[styles.input, styles.espacio]} placeholder="ID del Photon" value={photonId} onChangeText={setPhotonId} keyboardType="numeric" maxLength={24} />
-      
-      {!isEmailValid && email.length > 0 && (<Text style={styles.errorText}>Por favor, ingresa un correo válido.</Text>)}
-      <TextInput style={styles.input} placeholder="Correo Asociado a Particle" value={email} onChangeText={setEmail} keyboardType="email-address" />
-      
+      {!isPhotonIdValid && photonId.length > 0 && (
+        <Text style={styles.errorText}>El ID debe tener 24 caracteres numéricos.</Text>
+      )}
+      <TextInput
+        style={[styles.input, styles.espacio]}
+        placeholder="ID del Photon"
+        value={photonId}
+        onChangeText={setPhotonId}
+        keyboardType="numeric"
+        maxLength={24}
+      />
 
-      <TextInput style={styles.input} placeholder="Contraseña" value={password} onChangeText={setPassword} secureTextEntry={!showPassword}/>
+      {!isEmailValid && email.length > 0 && (
+        <Text style={styles.errorText}>Por favor, ingresa un correo válido.</Text>
+      )}
+      <TextInput
+        style={styles.input}
+        placeholder="Correo Asociado a Particle"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Contraseña"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry={!showPassword}
+      />
 
       {/* Checkbox para mostrar/ocultar contraseña */}
       <View style={[styles.checkboxContainer, styles.espacio]}>
-        <Checkbox value={showPassword} onValueChange={setShowPassword} color={showPassword ? 'blue' : undefined}/>
+        <Checkbox value={showPassword} onValueChange={setShowPassword} color={showPassword ? 'blue' : undefined} />
         <Text style={styles.checkboxLabel}>Mostrar Contraseña</Text>
       </View>
 
@@ -128,13 +155,27 @@ const AddDevice = () => {
         <Picker.Item label="Never" value="Never" />
       </Picker>
 
-      <TouchableOpacity style={[styles.secondaryButton, (!isEmailValid || !isPasswordValid || isGeneratingKey) && styles.disabledButton]} onPress={handleGenerateApiKey} disabled={!isEmailValid || !isPasswordValid || isGeneratingKey}>
+      <TouchableOpacity
+        style={[styles.secondaryButton, (!isEmailValid || !isPasswordValid || isGeneratingKey) && styles.disabledButton]}
+        onPress={handleGenerateApiKey}
+        disabled={!isEmailValid || !isPasswordValid || isGeneratingKey}
+      >
         <Text style={styles.secondaryButtonText}>{isGeneratingKey ? 'Generando...' : 'Generar Clave'}</Text>
       </TouchableOpacity>
 
-      {apiKey && (<TextInput style={[styles.input, styles.readOnlyInput, styles.espacio]} value={apiKey} editable={false} />)}
+      {apiKey && (
+        <TextInput
+          style={[styles.input, styles.readOnlyInput, styles.espacio]}
+          value={apiKey}
+          editable={false}
+        />
+      )}
 
-      <TouchableOpacity style={[styles.secondaryButton, (!isPhotonIdValid || !apiKey) && styles.disabledButton]} onPress={handleSaveToDatabase} disabled={!isPhotonIdValid || !apiKey}>
+      <TouchableOpacity
+        style={[styles.secondaryButton, (!isPhotonIdValid || !apiKey) && styles.disabledButton]}
+        onPress={handleSaveToDatabase}
+        disabled={!isPhotonIdValid || !apiKey}
+      >
         <Text style={styles.secondaryButtonText}>Guardar en Base de Datos</Text>
       </TouchableOpacity>
 
@@ -172,7 +213,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
-  espacio:{
+  espacio: {
     marginBottom: 40,
   },
   readOnlyInput: {

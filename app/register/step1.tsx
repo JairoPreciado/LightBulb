@@ -50,7 +50,7 @@ const RegisterStep1 = () => {
   // Función para enviar el correo
   const sendVerificationEmail = async (email:string, code:string) => {
     try {
-      const response = await fetch('https://server-lightbulb.vercel.app/api/send-email', {
+      const response = await fetch('https://server-lightbulb-five.vercel.app/api/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
