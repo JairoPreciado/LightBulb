@@ -19,7 +19,7 @@ const AddDevice = () => {
   const [expirationDate, setExpirationDate] = useState<number | null>(null);
 
   // Validaciones
-  const isPhotonIdValid = photonId.length === 24 && /^[0-9]+$/.test(photonId);
+  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-Za-z]+$/.test(photonId);
   const isEmailValid = email.includes('@');
   const isPasswordValid = password.length > 0;
 
@@ -116,7 +116,7 @@ const AddDevice = () => {
         placeholder="ID del Photon"
         value={photonId}
         onChangeText={setPhotonId}
-        keyboardType="numeric"
+        //keyboardType="numeric"
         maxLength={24}
       />
 
