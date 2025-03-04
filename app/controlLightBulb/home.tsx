@@ -7,8 +7,11 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 
 const HomeScreen = () => {
   const router = useRouter();
+  // Estado para almacenar la API key y expiración de un dispositivo (el primero válido que se encuentre)
   const [storedApiKey, setStoredApiKey] = useState('');
-  const [storedExpiresAt, setStoredExpiresAt] = useState('');
+  const [storedExpiresAt, setStoredExpiresAt] = useState<number | string | null>(null);
+  // Estado para almacenar la clave del dispositivo (la key del objeto dentro de Devices)
+  const [deviceKey, setDeviceKey] = useState("");
 
   useEffect(() => {
     const intervalId = setInterval(async () => {
@@ -21,22 +24,39 @@ const HomeScreen = () => {
   
         if (userDocSnap.exists()) {
           const data = userDocSnap.data();
-          const expiresAt = data.expiresAt;
-          const currentApiKey = data.apiKey || '';
-          setStoredApiKey(currentApiKey);
-          setStoredExpiresAt(expiresAt || null);
-          // Si existe una fecha de expiración y ya pasó, se elimina la apiKey
-          if (expiresAt && Date.now() > expiresAt) {
-            await updateDoc(userDocRef, { apiKey: '' });
-            setStoredApiKey('');
-            setStoredExpiresAt('');
+          const devicesData = data.Devices || {};
+          let validApiKey = "";
+          let validExpiresAt: number | string | null = null;
+          let validDeviceKey = "";
+  
+          // Iterar sobre cada dispositivo guardado en Devices
+          Object.entries(devicesData).forEach(([key, device]: [string, any]) => {
+            if (device && device.apikey && device.apikey.trim() !== "") {
+              // Tomamos el primer dispositivo con API key no vacía
+              if (!validApiKey) {
+                validApiKey = device.apikey;
+                validExpiresAt = device.expiresAt;
+                validDeviceKey = key;
+              }
+            }
+          });
+  
+          setStoredApiKey(validApiKey);
+          setStoredExpiresAt(validExpiresAt);
+          setDeviceKey(validDeviceKey);
+  
+          // Si la API key tiene fecha de expiración (número) y ya pasó, se actualiza para eliminarla
+          if (typeof validExpiresAt === "number" && Date.now() > validExpiresAt) {
+            await updateDoc(userDocRef, { [`Devices.${validDeviceKey}.apikey`]: "" });
+            setStoredApiKey("");
+            setStoredExpiresAt(null);
             Alert.alert('Aviso', 'Tu API Key ha expirado y ha sido eliminada.');
           }
         }
       } catch (error) {
         console.error('Error verificando la expiración de la API Key:', error);
       }
-    }, 10000); // Se verifica cada 10 segundos
+    }, 5000); // Se verifica cada 5 segundos
   
     return () => clearInterval(intervalId);
   }, []);
@@ -70,9 +90,9 @@ const HomeScreen = () => {
   
         <TouchableOpacity 
           style={styles.secondaryButton} 
-          onPress={() => router.push('./credentials')}
+          onPress={() => router.push('./controllers/addControllers')}
         >
-          <Text style={styles.secondaryButtonText}>Credenciales</Text>
+          <Text style={styles.secondaryButtonText}>Controladores</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -117,5 +137,5 @@ const styles = StyleSheet.create({
     backgroundColor: '#d3d3d3',
   },
 });
-  
+
 export default HomeScreen;

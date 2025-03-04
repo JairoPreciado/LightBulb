@@ -1,75 +1,36 @@
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  Alert,
-  TouchableOpacity,
-  StyleSheet,
-} from "react-native";
+import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet,} from "react-native";
 import { Picker } from "@react-native-picker/picker";
-import { auth, db } from "../../firebaseConfiguration";
+import { auth, db } from "../../../firebaseConfiguration";
 import { doc, setDoc } from "firebase/firestore";
 import { useRouter } from "expo-router";
 import Checkbox from "expo-checkbox";
-import Settings from "./settings"; // Asegúrate de importar tu componente Settings
+import Settings from "../settings"; // Asegúrate de importar tu componente Settings
 
 const AddDevice = () => {
   const router = useRouter(); // Hook para la navegación
   const [photonId, setPhotonId] = useState("");
+  const [distinctName, setDistinctName] = useState(""); // Nuevo campo para el nombre distintivo
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [apiKey, setApiKey] = useState("");
-  const [expiresIn, setExpiresIn] = useState("15 minutes");
   const [isGeneratingKey, setIsGeneratingKey] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [expirationDate, setExpirationDate] = useState<number | null>(null);
 
   // Validaciones
-  const isPhotonIdValid =
-    photonId.length === 24 && /^[0-9A-F]+$/.test(photonId);
+  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-F]+$/.test(photonId);
   const isEmailValid = email.includes("@");
   const isPasswordValid = password.length > 0;
 
-  // Mapear tiempo de expiración
-  const mapExpiresIn = (value: string): number | null => {
-    const expirationMap: Record<string, number> = {
-      "15 minutes": 900,
-      "1 hour": 3600,
-      "8 hours": 28800,
-      "1 day": 86400,
-      "30 days": 2592000,
-      "90 days": 7776000,
-      Never: 0,
-    };
-
-    return expirationMap[value] || null;
-  };
-
-  // Generar clave de acceso y calcular la expiración
+  // Generar clave de acceso sin expiración (se usará Never por defecto)
   const handleGenerateApiKey = async () => {
     setIsGeneratingKey(true);
     try {
-      const expiresValue = mapExpiresIn(expiresIn);
-
-      if (expiresValue === null) {
-        Alert.alert(
-          "Error",
-          "Tiempo de expiración no válido. Por favor selecciona un valor válido."
-        );
-        setIsGeneratingKey(false);
-        return;
-      }
-
-      // Calcular la fecha de expiración en milisegundos (null si es "Never")
-      const expirationTimestamp =
-        expiresValue === 0 ? null : Date.now() + expiresValue * 1000;
-
       const requestBody = `username=${encodeURIComponent(
         email
       )}&password=${encodeURIComponent(
         password
-      )}&grant_type=password&client_id=particle&client_secret=particle&expires_in=${expiresValue}`;
+      )}&grant_type=password&client_id=particle&client_secret=particle`;
 
       const response = await fetch("https://api.particle.io/oauth/token", {
         method: "POST",
@@ -81,7 +42,6 @@ const AddDevice = () => {
 
       if (response.ok) {
         setApiKey(data.access_token);
-        setExpirationDate(expirationTimestamp);
         Alert.alert("Éxito", "Clave generada correctamente.");
       } else {
         Alert.alert(
@@ -105,15 +65,25 @@ const AddDevice = () => {
         return;
       }
 
+      // Estructura para el dispositivo
+      const deviceData = {
+        photonId: photonId,
+        apikey: apiKey,
+        name: distinctName,
+        expiresAt: "Never", // Por defecto, sin expiración
+        subdevices: {} // Aquí puedes inicializar los subdispositivos, si los hay
+      };
+      
       await setDoc(
         doc(db, "BD", userId),
-        { photonId, apiKey, expiresAt: expirationDate },
+        { Devices: { [distinctName]: deviceData } },
         { merge: true }
       );
 
       Alert.alert("Éxito", "Datos guardados correctamente.");
       setPhotonId("");
       setApiKey("");
+      setDistinctName("");
     } catch (error: any) {
       if (error.code === "permission-denied") {
         Alert.alert(
@@ -142,6 +112,15 @@ const AddDevice = () => {
         onChangeText={(text) => setPhotonId(text.toUpperCase())}
         autoCapitalize="characters"
         maxLength={24}
+      />
+
+       {/* Nuevo campo para el nombre distintivo */}
+       <TextInput
+        style={[styles.input, styles.espacio]}
+        placeholder="Nombre distintivo del dispositivo"
+        value={distinctName}
+        onChangeText={setDistinctName}
+        maxLength={15}
       />
 
       {!isEmailValid && email.length > 0 && (
@@ -176,16 +155,10 @@ const AddDevice = () => {
       </View>
 
       <Picker
-        selectedValue={expiresIn}
-        onValueChange={(itemValue) => setExpiresIn(itemValue)}
+        selectedValue="Never"
         style={[styles.picker, styles.espacio]}
+        enabled={false}
       >
-        <Picker.Item label="15 minutes" value="15 minutes" />
-        <Picker.Item label="1 hour" value="1 hour" />
-        <Picker.Item label="8 hours" value="8 hours" />
-        <Picker.Item label="1 day" value="1 day" />
-        <Picker.Item label="30 days" value="30 days" />
-        <Picker.Item label="90 days" value="90 days" />
         <Picker.Item label="Never" value="Never" />
       </Picker>
 
@@ -214,7 +187,7 @@ const AddDevice = () => {
       <TouchableOpacity
         style={[
           styles.secondaryButton,
-          (!isPhotonIdValid || !apiKey) && styles.disabledButton,
+          (!isPhotonIdValid || !apiKey || !distinctName) && styles.disabledButton,
         ]}
         onPress={handleSaveToDatabase}
         disabled={!isPhotonIdValid || !apiKey}

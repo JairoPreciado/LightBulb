@@ -146,9 +146,9 @@ const Device: React.FC = () => {
               <Text style={styles.secondaryButtonText}>Programar</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('./consume2')}>
+            {/*<TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('./consume2')}>
               <Text style={styles.secondaryButtonText}>Ver Consumo</Text>
-            </TouchableOpacity>
+            </TouchableOpacity>*/}
           </View>
         </>
       ) : (

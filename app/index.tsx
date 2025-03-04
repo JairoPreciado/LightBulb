@@ -73,7 +73,7 @@ const SplashScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Bienvenido a Lightbulb</Text>
+      <Text style={styles.title}>Bienvenido a Control Particle </Text>
       {isConnected === false && (
         <Text style={styles.errorText}>
           Sin conexión a Internet. Conéctate para continuar.
