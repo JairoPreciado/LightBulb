@@ -3,28 +3,32 @@ import { View, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import NetInfo from '@react-native-community/netinfo';
 import axios from 'axios';
-import { auth, db } from '../../../firebaseConfiguration'; // Ajusta según tu configuración de Firebase
+import { auth, db } from '../../../firebaseConfiguration';
 import { doc, getDoc } from 'firebase/firestore';
-import Settings from '../settings'; // Asegúrate de importar tu componente Settings
+import Settings from '../settings';
 
 const Device: React.FC = () => {
   const router = useRouter();
-  const { name, pin } = useLocalSearchParams<{ name: string; pin: string }>(); // Recibe parámetros desde la ruta
-
+  // Recibimos: 
+  // - deviceKey: el distinct name del dispositivo completo (clave en Devices)
+  // - subName: el nombre del subdispositivo (opcional para mostrar)
+  // - pin: el pin que identifica al subdispositivo (p.ej., "D7")
+  const { deviceKey, subName, pin } = useLocalSearchParams<{ deviceKey: string; subName: string; pin: string }>();
+console.log(deviceKey, subName, pin);
   const [isConnected, setIsConnected] = useState(true);
   const [isDeviceOn, setIsDeviceOn] = useState(false);
   const [photonId, setPhotonId] = useState('');
   const [particleAccessToken, setParticleAccessToken] = useState('');
 
-  // Validar que los parámetros existan
+  // Validar que se reciban los parámetros necesarios
   useEffect(() => {
-    if (!name || !pin) {
-      Alert.alert('Error', 'No se recibieron los datos del dispositivo.');
-      router.back(); // Regresar si los parámetros no existen
+    if (!deviceKey || !pin) {
+      Alert.alert('Error', 'Faltan parámetros del dispositivo.');
+      router.back();
     }
-  }, [name, pin]);
-
-  // Obtener datos del Photon desde la base de datos al cargar la pantalla
+  }, [deviceKey, pin, router]);
+  
+  // Obtener datos del dispositivo (photonId y apiKey) usando deviceKey
   useEffect(() => {
     const fetchDeviceData = async () => {
       const userId = auth.currentUser?.uid;
@@ -32,58 +36,54 @@ const Device: React.FC = () => {
         Alert.alert('Error', 'Usuario no autenticado.');
         return;
       }
-
       try {
         const docRef = doc(db, 'BD', userId);
         const docSnap = await getDoc(docRef);
-
         if (docSnap.exists()) {
           const data = docSnap.data();
-          setPhotonId(data.photonId); // Asignar photonId desde la base de datos
-          setParticleAccessToken(data.apiKey); // Asignar apiKey desde la base de datos
+          const deviceData = data.Devices?.[deviceKey];
+          if (!deviceData) {
+            Alert.alert('Error', `No se encontró el dispositivo con deviceKey: ${deviceKey}`);
+            router.back();
+            return;
+          }
+          console.log('Datos del dispositivo:', deviceData);
+          setPhotonId(deviceData.photonId);
+          setParticleAccessToken(deviceData.apikey);
+          console.log(deviceData.photonId, deviceData.apikey);
         } else {
-          Alert.alert('Error', 'No se encontró el dispositivo en la base de datos.');
+          Alert.alert('Error', 'No se encontró información del usuario en la BD.');
         }
       } catch (error) {
         console.error('Error al obtener los datos del dispositivo:', error);
         Alert.alert('Error', 'Hubo un problema al cargar los datos del dispositivo.');
       }
     };
-
+  
     fetchDeviceData();
+  }, [deviceKey, router]);
+  
 
-    // Escuchar cambios de conexión
-    const unsubscribe = NetInfo.addEventListener(state => {
-      setIsConnected(state.isConnected ?? false);
-      if (!state.isConnected) {
-        Alert.alert('Sin conexión', 'No puedes usar la app sin conexión a Internet.');
-      }
-    });
-
-    return () => unsubscribe(); // Limpiar la suscripción al desmontar
-  }, []);
-
-  // Verificar el estado del dispositivo cada 5 segundos
+  // Consultar el estado del dispositivo cada 5 segundos usando el pin
   useEffect(() => {
     const interval = setInterval(() => {
       if (isConnected && photonId && particleAccessToken) {
         consultarEstadoDispositivo();
       }
-    }, 5000);
-
-    return () => clearInterval(interval); // Limpiar el intervalo al desmontar
+    }, 3500);
+    return () => clearInterval(interval);
   }, [isConnected, photonId, particleAccessToken]);
 
   const consultarEstadoDispositivo = async () => {
     if (!photonId || !particleAccessToken) return;
-
     try {
-      const response = await axios.get(`https://api.particle.io/v1/devices/${photonId}/estado${pin}`, {
-        headers: {
-          'Authorization': `Bearer ${particleAccessToken}`,
-        },
-      });
-      setIsDeviceOn(response.data.result); // Asume que `estado{pin}` devuelve `true` o `false`
+      const response = await axios.get(
+        `https://api.particle.io/v1/devices/${photonId}/estado${pin}`,
+        {
+          headers: { 'Authorization': `Bearer ${particleAccessToken}` },
+        }
+      );
+      setIsDeviceOn(response.data.result);
     } catch (error) {
       console.error(`Error al consultar el estado del dispositivo ${pin}:`, error);
     }
@@ -94,7 +94,6 @@ const Device: React.FC = () => {
       Alert.alert('Sin conexión', 'No puedes controlar el dispositivo sin conexión a Internet.');
       return;
     }
-
     const command = isDeviceOn ? 'off' : 'on';
     try {
       const response = await axios.post(
@@ -107,7 +106,6 @@ const Device: React.FC = () => {
           },
         }
       );
-
       if (response.data.return_value === 1) {
         setIsDeviceOn(!isDeviceOn);
         Alert.alert('Éxito', `Dispositivo ${isDeviceOn ? 'apagado' : 'encendido'} correctamente`);
@@ -127,9 +125,11 @@ const Device: React.FC = () => {
 
       {isConnected ? (
         <>
-          <Text style={styles.title}>Control de {name}</Text>
+          <Text style={styles.title}>
+            Control de {subName}
+          </Text>
           <Text style={styles.statusText}>
-            Estado del {name}: {isDeviceOn ? 'Encendido' : 'Apagado'}
+            Estado pin {pin}: {isDeviceOn ? 'Encendido' : 'Apagado'}
           </Text>
           <TouchableOpacity
             style={[styles.button, isDeviceOn ? styles.buttonOff : styles.buttonOn]}
@@ -137,18 +137,22 @@ const Device: React.FC = () => {
           >
             <Text style={styles.buttonText}>{isDeviceOn ? 'Apagar' : 'Encender'}</Text>
           </TouchableOpacity>
-
           <View style={styles.buttonContainer}>
             <TouchableOpacity
               style={styles.secondaryButton}
-              onPress={() => router.push(`./program?deviceName=${name}&pin=${pin}`)}
+              onPress={() =>
+                router.push({
+                  pathname: './program',
+                  params: {
+                    deviceName: subName || deviceKey,
+                    pin: pin,
+                    deviceKey: deviceKey,
+                  },
+                })
+              }
             >
               <Text style={styles.secondaryButtonText}>Programar</Text>
             </TouchableOpacity>
-
-            {/*<TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('./consume2')}>
-              <Text style={styles.secondaryButtonText}>Ver Consumo</Text>
-            </TouchableOpacity>*/}
           </View>
         </>
       ) : (
@@ -161,6 +165,8 @@ const Device: React.FC = () => {
     </View>
   );
 };
+
+export default Device;
 
 const styles = StyleSheet.create({
   container: {
@@ -244,5 +250,3 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
-
-export default Device;

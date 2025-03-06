@@ -56,7 +56,7 @@ const HomeScreen = () => {
       } catch (error) {
         console.error('Error verificando la expiración de la API Key:', error);
       }
-    }, 5000); // Se verifica cada 5 segundos
+    }, 1500); // Se verifica cada 5 segundos
   
     return () => clearInterval(intervalId);
   }, []);

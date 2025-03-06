@@ -29,7 +29,7 @@ interface Schedule {
 
 const Programar: React.FC = () => {
   const router = useRouter();
-  const { deviceName, pin } = useLocalSearchParams<{ deviceName: string; pin: string }>();
+  const { deviceName, pin, deviceKey } = useLocalSearchParams<{ deviceName: string; pin: string; deviceKey: string }>();
 
   const [turnOnTime, setTurnOnTime] = useState({ hour: '', minute: '' });
   const [turnOffTime, setTurnOffTime] = useState({ hour: '', minute: '' });
@@ -37,11 +37,11 @@ const Programar: React.FC = () => {
   const appState = useRef(AppState.currentState);
 
   useEffect(() => {
-    if (!deviceName || !pin) {
+    if (!deviceName || !pin || !deviceKey) {
       Alert.alert('Error', 'No se recibieron los datos del dispositivo.');
       router.back();
     }
-  }, [deviceName, pin]);
+  }, [deviceName, pin, deviceKey, router]);
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', handleAppStateChange);

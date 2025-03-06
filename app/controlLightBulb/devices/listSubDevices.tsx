@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  Button,
-  StyleSheet,
-  FlatList,
-  Alert,
-  TextInput,
-  TouchableOpacity,
-  Modal,
-} from "react-native";
+import { View, Text, Button, StyleSheet, FlatList, Alert, TextInput, TouchableOpacity, Modal,} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { doc, updateDoc, getDoc, deleteField } from "firebase/firestore";
 import { auth, db } from "../../../firebaseConfiguration";
@@ -19,9 +9,7 @@ const MAX_SUBDEVICES = 8;
 const VALID_PINS = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"];
 
 const ListSubDevices: React.FC = () => {
-  const [subdevices, setSubdevices] = useState<{ name: string; pin: string }[]>(
-    []
-  );
+  const [subdevices, setSubdevices] = useState<{ name: string; pin: string }[]>([]);
   const [newSubName, setNewSubName] = useState("");
   const [newSubPin, setNewSubPin] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
@@ -31,10 +19,8 @@ const ListSubDevices: React.FC = () => {
   } | null>(null);
   const [updatedName, setUpdatedName] = useState("");
   const router = useRouter();
-
   // Obtenemos la clave del dispositivo desde la query: ?deviceKey=...
   const { deviceKey } = useLocalSearchParams<{ deviceKey: string }>();
-
   // Cargar subdispositivos del dispositivo seleccionado
   useEffect(() => {
     const loadSubdevices = async () => {
@@ -191,13 +177,17 @@ const ListSubDevices: React.FC = () => {
       <TouchableOpacity
         style={styles.subdeviceButton}
         onPress={() =>
-          router.push(
-            `./devices?name=${encodeURIComponent(
-              item.name
-            )}&pin=${encodeURIComponent(item.pin)}`
-          )
-        }
+          router.push({
+            pathname: './devices',
+            params: {
+              subName: item.name,
+              pin: item.pin,
+              deviceKey: deviceKey,
+            },
+          })
+          }
       >
+
         <Text style={styles.subdeviceText}>
           {item.name} (Pin: {item.pin})
         </Text>
