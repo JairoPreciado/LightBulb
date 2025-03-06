@@ -142,7 +142,7 @@ console.log(deviceKey, subName, pin);
               style={styles.secondaryButton}
               onPress={() =>
                 router.push({
-                  pathname: './program',
+                  pathname: './program2',
                   params: {
                     deviceName: subName || deviceKey,
                     pin: pin,
