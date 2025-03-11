@@ -18,10 +18,10 @@ const ListUserDevices: React.FC = () => {
   }>>([]);
   // Dispositivos seleccionados para flasheo
   const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
-  // Estado para modal de gestión del dispositivo
-  const [modalVisible, setModalVisible] = useState(false);
   // Estado para indicar qué opción se ha seleccionado en el modal ('', 'updateName', 'updateId', 'delete')
   const [activeOption, setActiveOption] = useState('');
+  // Estado para modal de gestión del dispositivo
+  const [modalVisible, setModalVisible] = useState(false);
   // Dispositivo seleccionado para gestionar
   const [selectedDevice, setSelectedDevice] = useState<any>(null);
   // Estados para los inputs de actualización
