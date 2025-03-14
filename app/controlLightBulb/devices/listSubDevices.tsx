@@ -1,9 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Modal, Alert } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { auth, db } from '../../../firebaseConfiguration';
-import { doc, getDoc, updateDoc, deleteField } from 'firebase/firestore';
-import Settings from '../settings';
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+  Modal,
+  Alert,
+} from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { auth, db } from "../../../firebaseConfiguration";
+import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
+import Settings from "../settings";
 
 const MAX_SUBDEVICES = 10;
 const VALID_PINS = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"];
@@ -13,11 +22,11 @@ const ListSubDevices: React.FC = () => {
 
   const [subdevices, setSubdevices] = useState<any[]>([]);
   const [selectedSubdevice, setSelectedSubdevice] = useState<any>(null);
-  const [activeOption, setActiveOption] = useState('');
+  const [activeOption, setActiveOption] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
-  const [updatedName, setUpdatedName] = useState('');
-  const [newSubName, setNewSubName] = useState('');
-  const [newSubPin, setNewSubPin] = useState('');
+  const [updatedName, setUpdatedName] = useState("");
+  const [newSubName, setNewSubName] = useState("");
+  const [newSubPin, setNewSubPin] = useState("");
   const router = useRouter();
 
   // Cargar subdispositivos del dispositivo seleccionado
@@ -105,7 +114,7 @@ const ListSubDevices: React.FC = () => {
     }
   };
 
-  // Funciones de actualización y eliminación
+  // Funciones de actualización
   const updateSubdeviceName = async () => {
     if (!selectedSubdevice) return;
     const userId = auth.currentUser?.uid;
@@ -115,24 +124,33 @@ const ListSubDevices: React.FC = () => {
     }
     try {
       const docRef = doc(db, "BD", userId);
-      const newName = updatedName.trim() === '' ? selectedSubdevice.name : updatedName;
+      const newName =
+        updatedName.trim() === "" ? selectedSubdevice.name : updatedName;
       await updateDoc(docRef, {
-        [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}.name`]: newName,
+        [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}.name`]:
+          newName,
       });
-      setSubdevices(prev =>
-        prev.map(sd =>
+      setSubdevices((prev) =>
+        prev.map((sd) =>
           sd.pin === selectedSubdevice.pin ? { ...sd, name: newName } : sd
         )
       );
       setModalVisible(false);
-      setActiveOption('');
-      Alert.alert('Éxito', 'Nombre del subdispositivo actualizado correctamente.');
+      setActiveOption("");
+      Alert.alert(
+        "Éxito",
+        "Nombre del subdispositivo actualizado correctamente."
+      );
     } catch (error) {
-      console.error('Error al actualizar el nombre del subdispositivo:', error);
-      Alert.alert('Error', 'No se pudo actualizar el nombre del subdispositivo.');
+      console.error("Error al actualizar el nombre del subdispositivo:", error);
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar el nombre del subdispositivo."
+      );
     }
   };
 
+  // Funcion de eliminación
   const deleteSubdevice = async () => {
     if (!selectedSubdevice) return;
     const userId = auth.currentUser?.uid;
@@ -141,25 +159,31 @@ const ListSubDevices: React.FC = () => {
       return;
     }
     Alert.alert(
-      'Confirmación',
-      '¿Estás seguro de que deseas eliminar este subdispositivo?',
+      "Confirmación",
+      "¿Estás seguro de que deseas eliminar este subdispositivo?",
       [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Eliminar', style: 'destructive', onPress: async () => {
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
             try {
               const docRef = doc(db, "BD", userId);
               await updateDoc(docRef, {
-                [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}`]: deleteField(),
+                [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}`]:
+                  deleteField(),
               });
-              setSubdevices(prev => prev.filter(sd => sd.pin !== selectedSubdevice.pin));
+              setSubdevices((prev) =>
+                prev.filter((sd) => sd.pin !== selectedSubdevice.pin)
+              );
               setModalVisible(false);
-              setActiveOption('');
-              Alert.alert('Éxito', 'Subdispositivo eliminado correctamente.');
+              setActiveOption("");
+              Alert.alert("Éxito", "Subdispositivo eliminado correctamente.");
             } catch (error) {
-              console.error('Error al eliminar el subdispositivo:', error);
-              Alert.alert('Error', 'No se pudo eliminar el subdispositivo.');
+              console.error("Error al eliminar el subdispositivo:", error);
+              Alert.alert("Error", "No se pudo eliminar el subdispositivo.");
             }
-          }
+          },
         },
       ]
     );
@@ -168,19 +192,20 @@ const ListSubDevices: React.FC = () => {
   // Restaurar el modal a su estado inicial
   const handleModalClose = () => {
     setModalVisible(false);
-    setActiveOption('');
+    setActiveOption("");
   };
 
+  // Renderizar el contenido del modal
   const renderModalContent = () => {
     switch (activeOption) {
-      case 'updateName':
+      case "updateName":
         return (
           <View style={styles.modalContent}>
             <Text style={styles.modalLabel}>Editar Nombre</Text>
             <TextInput
               style={styles.modalInput}
               placeholder="Nombre actual"
-              value={selectedSubdevice ? selectedSubdevice.name : ''}
+              value={selectedSubdevice ? selectedSubdevice.name : ""}
               editable={false}
             />
             <TextInput
@@ -189,27 +214,43 @@ const ListSubDevices: React.FC = () => {
               value={updatedName}
               onChangeText={setUpdatedName}
             />
-            <TouchableOpacity style={styles.secondaryButton} onPress={updateSubdeviceName}>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={updateSubdeviceName}
+            >
               <Text style={styles.secondaryButtonText}>Actualizar nombre</Text>
             </TouchableOpacity>
           </View>
         );
-      case 'delete':
+      case "delete":
         return (
           <View style={styles.modalContent}>
-            <TouchableOpacity style={styles.secondaryButton2} onPress={deleteSubdevice}>
-              <Text style={styles.secondaryButtonText}>Borrar Subdispositivo</Text>
+            <TouchableOpacity
+              style={styles.secondaryButton2}
+              onPress={deleteSubdevice}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Borrar Subdispositivo
+              </Text>
             </TouchableOpacity>
           </View>
         );
       default:
         return (
           <View style={styles.modalOptionsContainer}>
-            <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption('updateName')}>
+            <TouchableOpacity
+              style={styles.modalOptionButton}
+              onPress={() => setActiveOption("updateName")}
+            >
               <Text style={styles.modalOptionText}>Actualizar Nombre</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption('delete')}>
-              <Text style={[styles.modalOptionText, { color: 'red' }]}>Eliminar Subdispositivo</Text>
+            <TouchableOpacity
+              style={styles.modalOptionButton}
+              onPress={() => setActiveOption("delete")}
+            >
+              <Text style={[styles.modalOptionText, { color: "red" }]}>
+                Eliminar Subdispositivo
+              </Text>
             </TouchableOpacity>
           </View>
         );
@@ -219,7 +260,7 @@ const ListSubDevices: React.FC = () => {
   // Renderizar la lista de subdispositivos
   const renderItem = ({ item }: { item: any }) => (
     <View style={styles.deviceItem}>
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.optionsButton}
         onPress={() => {
           setSelectedSubdevice(item);
@@ -232,7 +273,7 @@ const ListSubDevices: React.FC = () => {
         style={styles.deviceButton}
         onPress={() => {
           router.push({
-            pathname: './devices',
+            pathname: "./devices",
             params: {
               subName: item.name,
               pin: item.pin,
@@ -241,7 +282,9 @@ const ListSubDevices: React.FC = () => {
           });
         }}
       >
-        <Text style={styles.deviceText}>{item.name} (Pin: {item.pin})</Text>
+        <Text style={styles.deviceText}>
+          {item.name} (Pin: {item.pin})
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -252,6 +295,7 @@ const ListSubDevices: React.FC = () => {
 
       {/* Formulario para agregar subdispositivos (agregado) */}
       <View style={styles.formContainer}>
+        {/* Agregar un campo para ingresar el nombre del subdispositivo */}
         <TextInput
           style={styles.input}
           placeholder="Nombre del subdispositivo"
@@ -259,6 +303,8 @@ const ListSubDevices: React.FC = () => {
           onChangeText={setNewSubName}
           maxLength={20}
         />
+
+        {/* Agregar un campo para ingresar el pin del subdispositivo*/}
         <TextInput
           style={styles.input}
           placeholder="Pin (D0, D1, D2, D3, D4, D5, D6, D7)"
@@ -270,14 +316,20 @@ const ListSubDevices: React.FC = () => {
           <Text style={styles.addButtonText}>Crear Subdispositivo</Text>
         </TouchableOpacity>
       </View>
-
+      
+      {/* Renderizar la lista de subdispositivos*/}
       <FlatList
         data={subdevices}
         keyExtractor={(item) => item.pin}
         renderItem={renderItem}
-        ListEmptyComponent={<Text style={styles.emptyText}>No hay subdispositivos creados aún.</Text>}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>
+            No hay subdispositivos creados aún.
+          </Text>
+        }
       />
 
+      {/*Modal para gestionar subdispositivos*/}
       <Modal
         visible={modalVisible}
         animationType="fade"
@@ -288,7 +340,10 @@ const ListSubDevices: React.FC = () => {
           <View style={styles.modalContainer}>
             <Text style={styles.modalTitle}>Gestión del Subdispositivo</Text>
             {renderModalContent()}
-            <TouchableOpacity style={styles.modalOptionButtonClose} onPress={handleModalClose}>
+            <TouchableOpacity
+              style={styles.modalOptionButtonClose}
+              onPress={handleModalClose}
+            >
               <Text style={styles.modalOptionText}>Cerrar</Text>
             </TouchableOpacity>
           </View>
@@ -312,185 +367,185 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   // Estilos para el formulario de creación (agregados)
   formContainer: {
     marginBottom: 20,
-    backgroundColor: '#e6e6e6',
+    backgroundColor: "#e6e6e6",
     borderRadius: 10,
     padding: 15,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 5,
     padding: 10,
     marginBottom: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   addButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: "#007BFF",
     borderRadius: 5,
     paddingVertical: 10,
     paddingHorizontal: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   addButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   // Estilos para los items de la lista
   deviceItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
-    backgroundColor: '#e6e6e6',
+    backgroundColor: "#e6e6e6",
     borderRadius: 5,
     marginVertical: 8,
   },
   optionsButton: {
     width: 40,
     height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#ccc',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#ccc",
     borderRadius: 20,
     marginRight: 10,
   },
   optionsButtonText: {
     fontSize: 20,
-    color: '#333',
+    color: "#333",
   },
   deviceButton: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'flex-start',
+    justifyContent: "center",
+    alignItems: "flex-start",
   },
   deviceText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   emptyText: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 16,
-    color: '#888',
+    color: "#888",
     marginTop: 20,
   },
   // Estilos para el modal
   modalBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
-    width: '100%',
+    width: "100%",
     paddingVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalContainer: {
-    width: '80%',
-    backgroundColor: '#FFE5B4',
+    width: "80%",
+    backgroundColor: "#FFE5B4",
     borderRadius: 10,
     padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
   },
   modalLabel: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     fontSize: 16,
     marginTop: 10,
   },
   modalInput: {
-    width: '100%',
+    width: "100%",
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 5,
     padding: 10,
     marginVertical: 5,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   modalOptionsContainer: {
-    width: '100%',
+    width: "100%",
     marginVertical: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalOptionButton: {
-    width: '100%',
+    width: "100%",
     padding: 15,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f0f0f0",
     borderRadius: 10,
     marginVertical: 5,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalOptionButtonClose: {
-    width: '100%',
+    width: "100%",
     padding: 15,
-    backgroundColor: '#cccccc',
+    backgroundColor: "#cccccc",
     borderRadius: 10,
     marginVertical: 5,
-    alignItems: 'center',
+    alignItems: "center",
   },
   modalOptionText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   secondaryButton: {
-    backgroundColor: '#007BFF',
-    width: '100%',
+    backgroundColor: "#007BFF",
+    width: "100%",
     height: 35,
     marginBottom: 10,
     borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   secondaryButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   secondaryButton2: {
-    backgroundColor: 'red',
-    width: '100%',
+    backgroundColor: "red",
+    width: "100%",
     height: 35,
     marginBottom: 10,
     borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   settingsContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 10,
     right: 10,
   },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 20,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
     borderRadius: 5,
   },
   backButtonText: {
     fontSize: 18,
-    color: '#333',
+    color: "#333",
   },
 });

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Alert, TouchableOpacity, Dimensions, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { collection, query, where, getDocs } from 'firebase/firestore'; // Firebase Firestore
 import { db } from '../../firebaseConfiguration'; // Ajusta la ruta según tu estructura
@@ -139,62 +139,100 @@ const RegisterStep1 = () => {
   );
 };
 
+//responsive design -----------------------------------------------------------------------------------------
+
+const { width, height } = Dimensions.get('window');
+const scale = Math.min(width, height) / 375; // Base scale on a 375pt width (iPhone standard)
+// Función para hacer responsive los tamaños de texto basado en el ancho de la pantalla
+const normalizeFont = (size:any) => {
+  return Math.round(size * scale);
+};
+// Función para hacer responsive los espaciados basados en el porcentaje del ancho de pantalla
+const responsiveSize = (percentage:any) => {
+  return width * (percentage / 100);
+};
+// Función para determinar un tamaño seguro para elementos posicionados cerca de los bordes
+const getSafeBottomMargin = () => {
+  // En iOS con notch, añade más espacio para evitar colisiones con el área de gestos
+  return Platform.OS === 'ios' && height > 800 ? 34 : 20;
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: '5%',
-    backgroundColor:'#f0f0f0'
+    paddingHorizontal: responsiveSize(5),
+    paddingVertical: responsiveSize(3),
+    backgroundColor: '#f0f0f0',
   },
   title: {
-    fontSize: 24,
+    fontSize: normalizeFont(24),
     fontWeight: 'bold',
-    marginBottom: '5%',
+    marginBottom: responsiveSize(5),
+    textAlign: 'center',
   },
   input: {
     width: '100%',
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
+    padding: responsiveSize(2.5),
+    marginBottom: responsiveSize(2.5),
+    fontSize: normalizeFont(14),
   },
   backButton: {
-    position: 'absolute', 
-    bottom: 20, 
-    left: 20, 
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    position: 'absolute',
+    bottom: getSafeBottomMargin(),
+    left: responsiveSize(5),
+    paddingHorizontal: responsiveSize(2.5),
+    paddingVertical: responsiveSize(1.25),
     backgroundColor: '#ddd',
     borderRadius: 5,
+    zIndex: 10,
   },
   backButtonText: {
-    fontSize: 16,
+    fontSize: normalizeFont(16),
     color: '#333',
   },
   errorText: {
     color: 'red',
-    fontSize: 12,
-    marginBottom: '3%',
+    fontSize: normalizeFont(12),
+    marginBottom: responsiveSize(3),
+    width: '100%',
   },
   primaryButton: {
     width: '100%',
-    height: '5%',
+    height: Math.max(40, responsiveSize(10)), // Altura mínima de 40px
     backgroundColor: '#007BFF',
     borderRadius: 5,
-    marginBottom: '3%',
+    marginBottom: responsiveSize(3),
     justifyContent: 'center',
     alignItems: 'center',
   },
   primaryButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: normalizeFont(16),
     fontWeight: 'bold',
   },
   primaryDisabledButton: {
     backgroundColor: '#d3d3d3',
   },
+  // Estilos adicionales para diferentes tamaños de pantallas
+  tabletContainer: {
+    paddingHorizontal: responsiveSize(10), // Más padding en tablets
+  },
+  landscapeContainer: {
+    paddingHorizontal: responsiveSize(15), // Más padding en modo horizontal
+  },
+  landscapeBackButton: {
+    bottom: getSafeBottomMargin(),
+    left: responsiveSize(5),
+  },
+  tabletBackButton: {
+    paddingHorizontal: responsiveSize(3),
+    paddingVertical: responsiveSize(1.5),
+  }
 });
 
 

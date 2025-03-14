@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, StyleSheet, Alert, Modal, TouchableOpacity} from "react-native";
+import { View, Text, TextInput, StyleSheet, Alert, Modal, TouchableOpacity,Dimensions, Platform} from "react-native";
 import Checkbox from "expo-checkbox";
 import { useRouter } from "expo-router";
 import { auth, db } from "../../firebaseConfiguration";
@@ -248,23 +248,33 @@ const ManageAccount = () => {
   );
 };
 
+//responsive design -----------------------------------------------------------------------------------------
+
+const { width, height } = Dimensions.get('window');
+// Calculate responsive size based on screen width
+const responsiveSize = (size:any) => {
+  return (width / 375) * size; // 375 is used as base width (iPhone X)
+};
+// Calculate responsive height based on screen height
+const responsiveHeight = (size:any) => {
+  return (height / 812) * size; // 812 is used as base height (iPhone X)
+};
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: responsiveSize(20),
   },
   settingsButton: {
     position: "absolute",
-    top: 10,
-    right: 10,
+    top: Platform.OS === 'ios' ? responsiveSize(40) : responsiveSize(10),
+    right: responsiveSize(10),
     backgroundColor: "#ddd",
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: responsiveSize(20),
+    padding: responsiveSize(10),
   },
   settingsButtonText: {
-    fontSize: 18,
+    fontSize: responsiveSize(18),
   },
-
   modalBackground: {
     flex: 1,
     justifyContent: "center",
@@ -274,117 +284,115 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: "80%",
     backgroundColor: "#FFE5B4",
-    borderRadius: 10,
-    padding: "10%",
+    borderRadius: responsiveSize(10),
+    padding: responsiveSize(20),
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.3,
-    shadowRadius: 10,
+    shadowRadius: responsiveSize(10),
     elevation: 5,
+    maxHeight: height * 0.8, // Maximum height of 80% of screen height
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: responsiveSize(24),
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 20,
+    marginBottom: responsiveSize(20),
   },
-
   modalOptionsContainer: {
     width: "100%",
-    marginVertical: 10,
+    marginVertical: responsiveSize(10),
     alignItems: "center",
   },
   modalOptionButton: {
     width: "100%",
-    padding: 15,
-    marginVertical: 5,
+    padding: responsiveSize(15),
+    marginVertical: responsiveSize(5),
     backgroundColor: "#f0f0f0",
-    borderRadius: 10,
+    borderRadius: responsiveSize(10),
     alignItems: "center",
   },
   modalOptionText: {
-    fontSize: 16,
+    fontSize: responsiveSize(16),
     fontWeight: "bold",
     textAlign: "center",
   },
   modalContent: {
-    marginVertical: 20,
+    marginVertical: responsiveSize(20),
     width: "100%",
   },
   modalSubtitle: {
-    fontSize: 18,
+    fontSize: responsiveSize(18),
     fontWeight: "bold",
-    marginBottom: '10%',
+    marginBottom: responsiveSize(15),
   },
   modalInput: {
     width: "100%",
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
+    borderRadius: responsiveSize(5),
+    padding: responsiveSize(10),
+    marginBottom: responsiveSize(10),
   },
   modalCheckboxContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: responsiveSize(10),
   },
   modalCheckboxLabel: {
-    marginLeft: 10,
-    fontSize: 14,
+    marginLeft: responsiveSize(10),
+    fontSize: responsiveSize(14),
   },
   modalErrorText: {
     color: "red",
-    fontSize: 12,
-    marginBottom: 10,
+    fontSize: responsiveSize(12),
+    marginBottom: responsiveSize(10),
   },
-
-
   modalButtonPassword: {
     backgroundColor: "#007BFF",
     width: "100%",
-    height: '20%',
-    marginBottom: '10%',
-    borderRadius: 5,
+    height: responsiveHeight(40),
+    marginBottom: responsiveSize(15),
+    borderRadius: responsiveSize(5),
     justifyContent: "center",
     alignItems: "center",
   },
   modalButtonDanger: {
     backgroundColor: "red",
     width: "100%",
-    height: '30%',
-    marginBottom: '40%',
-    borderRadius: 5,
+    height: responsiveHeight(45),
+    marginBottom: responsiveSize(20),
+    borderRadius: responsiveSize(5),
     justifyContent: "center",
     alignItems: "center",
   },
   modalButtonLogout: {
     backgroundColor: "orange",
     width: "100%",
-    height: '30%',
-    marginBottom: '40%',
-    borderRadius: 5,
+    height: responsiveHeight(45),
+    marginBottom: responsiveSize(20),
+    borderRadius: responsiveSize(5),
     justifyContent: "center",
     alignItems: "center",
   },
   modalButtonClose: {
     width: "100%",
-    height: '14%',
+    height: responsiveHeight(40),
     backgroundColor: "brown",
-    borderRadius: 5,
-    marginBottom: '3%',
+    borderRadius: responsiveSize(5),
+    marginBottom: responsiveSize(10),
     justifyContent: "center",
     alignItems: "center",
   },
-
   modalButtonText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: responsiveSize(16),
     fontWeight: "bold",
   },
   disabledButton: {
     backgroundColor: "#d3d3d3", // Color gris cuando está deshabilitado
   },
 });
+
 
 export default ManageAccount;
