@@ -115,16 +115,19 @@ const RegisterStep1 = () => {
       {email && !isEmailValid && <Text style={styles.errorText}>El correo no es válido.</Text>}
       
       {/* Botón de enviar codigo al correo */}
-      <TouchableOpacity style={[styles.secondaryButton,!isEmailValid && styles.disabledButton,]} onPress={handleSendCode} disabled={!isEmailValid}>
-        <Text style={styles.secondaryButtonText}>Enviar Codigo</Text>
+      <TouchableOpacity style={[styles.primaryButton,!isEmailValid && styles.primaryDisabledButton,]} onPress={handleSendCode} disabled={!isEmailValid}>
+        <Text style={styles.primaryButtonText}>Enviar Codigo</Text>
       </TouchableOpacity>
+
+      {/* Salto de linea improvisado xd*/}
+      <View style={{height: '2%'}} />
       
       {/* Input de Codigo de verificacion */}
       <TextInput style={styles.input} placeholder="Código de Verificación" keyboardType="numeric" value={inputCode} onChangeText={setInputCode} editable={codeSent} maxLength={6}/>
       
       {/* Botón de verificar el correo */}
-      <TouchableOpacity style={[styles.secondaryButton,!codeSent && styles.disabledButton,]} onPress={handleVerifyCode} disabled={!codeSent}>
-        <Text style={styles.secondaryButtonText}>Verificar Codigo</Text>
+      <TouchableOpacity style={[styles.primaryButton,!codeSent && styles.primaryDisabledButton,]} onPress={handleVerifyCode} disabled={!codeSent}>
+        <Text style={styles.primaryButtonText}>Verificar Codigo</Text>
       </TouchableOpacity>
 
       {/* Botón de regresar */}
@@ -141,12 +144,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: '5%',
+    backgroundColor:'#f0f0f0'
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: '5%',
   },
   input: {
     width: '100%',
@@ -166,31 +170,32 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   backButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#333',
   },
   errorText: {
     color: 'red',
     fontSize: 12,
-    marginBottom: 10,
+    marginBottom: '3%',
   },
-  secondaryButton: {
+  primaryButton: {
+    width: '100%',
+    height: '5%',
     backgroundColor: '#007BFF',
-    width:150,
-    height:35,
-    marginBottom: 10,
     borderRadius: 5,
+    marginBottom: '3%',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  secondaryButtonText: {
+  primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  disabledButton: {
-        backgroundColor: '#d3d3d3', // Color gris cuando está deshabilitado
-  }
+  primaryDisabledButton: {
+    backgroundColor: '#d3d3d3',
+  },
 });
+
 
 export default RegisterStep1;

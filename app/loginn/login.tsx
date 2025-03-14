@@ -68,7 +68,7 @@ const LoginScreen = () => {
     <View style={styles.container}>
 
       {/* Titulo de la vista */}
-      <Text style={styles.title}>Lightbulb</Text>
+      <Text style={styles.title}>Control Particle</Text>
       
       {/* Input para ingresar el correo */}
       <TextInput style={styles.input} placeholder="Correo" value={email} onChangeText={setEmail} maxLength={50} keyboardType="email-address"/>
@@ -89,8 +89,8 @@ const LoginScreen = () => {
       </View>
 
       {/* Botón para mandar las credenciales a verificar para iniciar sesion */}
-      <TouchableOpacity style={[styles.secondaryButton,!isFormValid && styles.disabledButton,]} onPress={handleLogin} disabled={!isFormValid}>
-        <Text style={styles.secondaryButtonText}>Iniciar</Text>
+      <TouchableOpacity style={[styles.primaryButton,!isFormValid && styles.primaryDisabledButton,]} onPress={handleLogin} disabled={!isFormValid}>
+        <Text style={styles.primaryButtonText}>Iniciar</Text>
       </TouchableOpacity>
 
       {/* Botón para crear una cuenta o registrar una */}
@@ -107,12 +107,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: '5%',
+    backgroundColor:'#f0f0f0'
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: '5%',
   },
   input: {
     width: '100%',
@@ -142,26 +143,26 @@ const styles = StyleSheet.create({
     marginTop: 10,
     textDecorationLine: 'underline',
   },
-  secondaryButton: {
+  recovery: {
+    marginLeft: 'auto',
+    marginTop: '-1%',
+  },
+  primaryButton: {
+    width: '100%',
+    height: '5%',
     backgroundColor: '#007BFF',
-    paddingVertical: 10,
-    paddingHorizontal: 160,
-    marginHorizontal: 5,
     borderRadius: 5,
+    marginBottom: '3%',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  secondaryButtonText: {
+  primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  disabledButton: {
+  primaryDisabledButton: {
     backgroundColor: '#d3d3d3', // Color gris cuando está deshabilitado
-  },
-  recovery: {
-    marginLeft: 'auto',
-    marginTop: -10,
   }
 });
 

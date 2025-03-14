@@ -111,6 +111,7 @@ const UserGuide = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f0f0f0',
   },
   settingsContainer: {
     position: 'absolute',
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     padding: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#f0f0f0',
   },
   title: {
     fontSize: 24,

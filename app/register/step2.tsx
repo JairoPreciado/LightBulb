@@ -79,8 +79,8 @@ const RegisterStep2 = () => {
       </View>
 
       {/* Botón Crear Cuenta */}      
-      <TouchableOpacity style={[styles.secondaryButton,!isFormValid && styles.disabledButton,]} onPress={handleCreateAccount} disabled={!isFormValid} >
-        <Text style={styles.secondaryButtonText}>Crear Cuenta</Text>
+      <TouchableOpacity style={[styles.primaryButton,!isFormValid && styles.primaryDisabledButton,]} onPress={handleCreateAccount} disabled={!isFormValid} >
+        <Text style={styles.primaryButtonText}>Crear Cuenta</Text>
       </TouchableOpacity>
 
       {/* Botón de regresar */}
@@ -97,12 +97,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: '5%',
+    backgroundColor:'#f0f0f0'
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: '5%',
   },
   input: {
     width: '100%',
@@ -110,6 +111,11 @@ const styles = StyleSheet.create({
     borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
+    marginBottom: 10,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
     marginBottom: 10,
   },
   checkboxContainer: {
@@ -121,12 +127,6 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     marginLeft: 8,
     fontSize: 14,
-  },
-  errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginBottom: 10,
-    textAlign: 'center',
   },
   backButton: {
     position: 'absolute', 
@@ -141,23 +141,24 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#333',
   },
-  secondaryButton: {
+  primaryButton: {
+    width: '100%',
+    height: '5%',
     backgroundColor: '#007BFF',
-    width:150,
-    height:35,
-    marginBottom: 10,
     borderRadius: 5,
+    marginBottom: '3%',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  secondaryButtonText: {
+  primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  disabledButton: {
-        backgroundColor: '#d3d3d3', // Color gris cuando está deshabilitado
-  }
+  primaryDisabledButton: {
+    backgroundColor: '#d3d3d3',
+  },
 });
+
 
 export default RegisterStep2;

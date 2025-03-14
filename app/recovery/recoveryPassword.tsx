@@ -8,16 +8,29 @@ import { db } from '../../firebaseConfiguration';
 const RecoveryPassword = () => {
   const router = useRouter();
   const [email, setEmail] = useState('');
-  const [isEmailValid, setIsEmailValid] = useState(false);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
   // Expresión regular para validar correos electrónicos
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
-  // Validar correo electrónico
-  const validateEmail = (email: string) => {
-    setIsEmailValid(emailRegex.test(email));
+  // Dominios válidos (agregado de LoginScreen)
+  const validDomains = [
+    'gmail.com',
+    'yahoo.com',
+    'hotmail.com',
+    'outlook.com',
+    'ucol.mx',
+  ];
+
+  // Verifica si el dominio del correo es válido (agregado de LoginScreen)
+  const isDomainValid = (email: string) => {
+    if (!email.includes('@')) return false;
+    const domain = email.split('@')[1];
+    return validDomains.includes(domain);
   };
+
+  // Verifica si el correo tiene un formato y dominio válidos (modificado)
+  const isEmailValid = email ? emailRegex.test(email) && isDomainValid(email) : false;
 
   // Función para verificar si el correo existe en Firebase
   const checkEmailExists = async (email: string): Promise<boolean> => {
@@ -77,24 +90,25 @@ const RecoveryPassword = () => {
         placeholder="Correo Electrónico"
         keyboardType="email-address"
         value={email}
-        onChangeText={(text) => {
-          setEmail(text);
-          validateEmail(text);
-        }}
+        onChangeText={setEmail}
         maxLength={50}
       />
-      {email && !isEmailValid && <Text style={styles.errorText}>El correo no es válido.</Text>}
+      {email && emailRegex.test(email) && !isDomainValid(email) && (
+        <Text style={styles.errorText}>
+          El correo no es válido.
+        </Text>
+      )}
 
       {/* Botón de enviar correo */}
       <TouchableOpacity
         style={[
-          styles.secondaryButton,
-          (isButtonDisabled || !isEmailValid) && styles.disabledButton,
+          styles.primaryButton,
+          (!isEmailValid || isButtonDisabled) && styles.primaryDisabledButton,
         ]}
         onPress={handleSendPasswordReset}
-        disabled={isButtonDisabled || !isEmailValid}
+        disabled={!isEmailValid || isButtonDisabled}
       >
-        <Text style={styles.secondaryButtonText}>
+        <Text style={styles.primaryButtonText}>
           {isButtonDisabled ? 'Espera 10s...' : 'Enviar Contraseña por Correo'}
         </Text>
       </TouchableOpacity>
@@ -112,12 +126,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: '5%',
+    backgroundColor:'#f0f0f0'
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 20,
+    marginBottom: '5%',
   },
   input: {
     width: '100%',
@@ -128,40 +143,41 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   backButton: {
-    position: 'absolute',
-    bottom: 20,
-    left: 20,
+    position: 'absolute', 
+    bottom: 20, 
+    left: 20, 
     paddingHorizontal: 10,
     paddingVertical: 5,
     backgroundColor: '#ddd',
     borderRadius: 5,
   },
   backButtonText: {
-    fontSize: 18,
+    fontSize: 16,
     color: '#333',
   },
   errorText: {
     color: 'red',
     fontSize: 12,
-    marginBottom: 10,
+    marginBottom: '3%',
   },
-  secondaryButton: {
-    backgroundColor: '#007BFF',
+  primaryButton: {
     width: '100%',
-    height: 45,
-    marginBottom: 10,
+    height: '5%',
+    backgroundColor: '#007BFF',
     borderRadius: 5,
+    marginBottom: '3%',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  secondaryButtonText: {
+  primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  disabledButton: {
+  primaryDisabledButton: {
     backgroundColor: '#d3d3d3',
   },
 });
+
 
 export default RecoveryPassword;

@@ -56,7 +56,7 @@ const HomeScreen = () => {
       } catch (error) {
         console.error('Error verificando la expiración de la API Key:', error);
       }
-    }, 1500); // Se verifica cada 5 segundos
+    }, 150000); // Se verifica cada 5 segundos
   
     return () => clearInterval(intervalId);
   }, []);
@@ -67,73 +67,138 @@ const HomeScreen = () => {
       <View style={styles.settingsContainer}>
         <Settings />
       </View>
-  
-      {/* Contenido principal de la pantalla */}
-      <Text style={styles.text}>Bienvenido a Home</Text>
-  
+
+      {/* Texto de bienvenida */}
+      <Text style={styles.text}>Bienvenido a Lightbulb</Text>
+      <Text style={styles.subText}>
+        Gestiona toda la información de la app y configura tus dispositivos.
+      </Text>
+
+      {/* Tarjetas informativas */}
+      <View style={styles.infoContainer}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>📡 Dispositivos</Text>
+          <Text style={styles.cardText}>
+            Gestiona y controla los dispositivos vinculados a tu cuenta.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>🛠️ Controladores</Text>
+          <Text style={styles.cardText}>
+            Crea y configura nuevos dispositivos para personalizar tu experiencia.
+          </Text>
+        </View>
+
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>📖 Guía de usuario</Text>
+          <Text style={styles.cardText}>
+            Aprende cómo usar todas las funciones de la aplicación fácilmente.
+          </Text>
+        </View>
+      </View>
+
       {/* Contenedor para los botones en horizontal */}
       <View style={styles.buttonRow}>
         <TouchableOpacity 
-          style={[styles.secondaryButton, !storedApiKey && styles.disabledButton]} 
+          style={[styles.primaryButton, !storedApiKey && styles.primaryDisabledButton]} 
           disabled={!storedApiKey}
           onPress={() => router.push('./devices/listDevices')}
         >
-          <Text style={styles.secondaryButtonText}>Dispositivos</Text>
+          <Text style={styles.primaryButtonText}>Dispositivos</Text>
         </TouchableOpacity>
-  
+
         <TouchableOpacity 
-          style={styles.secondaryButton} 
+          style={styles.primaryButton} 
           onPress={() => router.push('./guideUser')}
         >
-          <Text style={styles.secondaryButtonText}>Guía</Text>
+          <Text style={styles.primaryButtonText}>Guía</Text>
         </TouchableOpacity>
-  
+
         <TouchableOpacity 
-          style={styles.secondaryButton} 
+          style={styles.primaryButton} 
           onPress={() => router.push('./controllers/addControllers')}
         >
-          <Text style={styles.secondaryButtonText}>Controladores</Text>
+          <Text style={styles.primaryButtonText}>Controladores</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 };
-  
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    padding: '5%',
+    justifyContent: 'center',
+    backgroundColor:'#f0f0f0'
   },
   settingsContainer: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: '3%',
+    right: '3%',
   },
   text: {
-    fontSize: 18,
+    fontSize: 22,
+    fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 350,
+    marginBottom: 10,
+  },
+  subText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#666',
+  },
+  infoContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  card: {
+    width: '90%',
+    backgroundColor: '#f8f9fa',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  cardText: {
+    fontSize: 14,
+    color: '#555',
   },
   buttonRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 400,
+    position: 'absolute',
+    bottom: '5%',
+    left: 0,
+    right: 0,
+    paddingHorizontal: '5%',
   },
-  secondaryButton: {
+  primaryButton: {
     backgroundColor: '#007BFF',
     borderRadius: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    paddingVertical: '3%',
+    paddingHorizontal: '6%',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 5,
+    marginHorizontal: '2%',
   },
-  secondaryButtonText: {
+  primaryButtonText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
-  disabledButton: {
+  primaryDisabledButton: {
     backgroundColor: '#d3d3d3',
   },
 });
