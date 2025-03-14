@@ -7,13 +7,14 @@ import { useRouter } from "expo-router"
 import { auth, db } from "../../firebaseConfiguration"
 import { updatePassword, deleteUser, reauthenticateWithCredential, EmailAuthProvider } from "firebase/auth"
 import { doc, deleteDoc } from "firebase/firestore"
+import { X, Key, UserX, LogOut } from "lucide-react-native"
 
-interface ManageAccountProps {
+interface SettingsModalProps {
   isVisible: boolean
   onClose: () => void
 }
 
-const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
+const SettingsModal = ({ isVisible, onClose }: SettingsModalProps) => {
   const [activeOption, setActiveOption] = useState("")
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -84,10 +85,8 @@ const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
       case "password":
         return (
           <View style={styles.modalContent}>
-            {/* Titulo de la vista de cambiar contraseña */}
             <Text style={styles.modalSubtitle}>Cambiar Contraseña</Text>
 
-            {/* Input para meter la contraseña actual */}
             <TextInput
               style={styles.modalInput}
               placeholder="Contraseña Actual"
@@ -97,7 +96,6 @@ const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
               maxLength={16}
             />
 
-            {/* Input para meter la contraseña nueva */}
             <TextInput
               style={styles.modalInput}
               placeholder="Nueva Contraseña"
@@ -110,17 +108,15 @@ const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
               <Text style={styles.modalErrorText}>La nueva contraseña debe tener entre 8 y 16 caracteres.</Text>
             )}
 
-            {/* Checkbox para ocultar o mostrar la contraseña */}
             <View style={styles.modalCheckboxContainer}>
               <Checkbox
                 value={showPasswords}
                 onValueChange={setShowPasswords}
-                color={showPasswords ? "blue" : undefined}
+                color={showPasswords ? "#007BFF" : undefined}
               />
               <Text style={styles.modalCheckboxLabel}>Mostrar Contraseñas</Text>
             </View>
 
-            {/* Boton para actualizar contraseña */}
             <TouchableOpacity
               style={[styles.modalButtonPassword, !isPasswordValid && styles.disabledButton]}
               onPress={handleUpdatePassword}
@@ -133,10 +129,8 @@ const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
       case "delete":
         return (
           <View style={styles.modalContent}>
-            {/* Titulo de la vista de eliminar del modal */}
             <Text style={[styles.modalSubtitle, { color: "red" }]}>Eliminar Cuenta</Text>
 
-            {/* Botón de eliminar cuenta */}
             <TouchableOpacity
               style={styles.modalButtonDanger}
               onPress={() =>
@@ -153,9 +147,7 @@ const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
       case "logout":
         return (
           <View style={styles.modalContent}>
-            {/* Titulo de la vista de eliminar del modal */}
-            <Text style={[styles.modalSubtitle, { color: "orange" }]}>Cerrar sesion</Text>
-            {/* Botón de cerrar sesion */}
+            <Text style={[styles.modalSubtitle, { color: "orange" }]}>Cerrar sesión</Text>
             <TouchableOpacity style={styles.modalButtonLogout} onPress={handleLogout}>
               <Text style={styles.modalButtonText}>Cerrar sesión</Text>
             </TouchableOpacity>
@@ -164,19 +156,19 @@ const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
       default:
         return (
           <View style={styles.modalOptionsContainer}>
-            {/* Botón de cambio de password */}
             <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("password")}>
+              <Key size={20} color="#333" style={styles.optionIcon} />
               <Text style={styles.modalOptionText}>Cambiar Contraseña</Text>
             </TouchableOpacity>
 
-            {/* Botón de eliminar la cuenta */}
             <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("delete")}>
+              <UserX size={20} color="red" style={styles.optionIcon} />
               <Text style={[styles.modalOptionText, { color: "red" }]}>Eliminar Cuenta</Text>
             </TouchableOpacity>
 
-            {/* Botón de cerrar sesion */}
             <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("logout")}>
-              <Text style={styles.modalOptionText}>Cerrar Sesión</Text>
+              <LogOut size={20} color="#FF8C00" style={styles.optionIcon} />
+              <Text style={[styles.modalOptionText, { color: "#FF8C00" }]}>Cerrar Sesión</Text>
             </TouchableOpacity>
           </View>
         )
@@ -185,36 +177,38 @@ const ManageAccount = ({ isVisible, onClose }: ManageAccountProps) => {
 
   return (
     <Modal visible={isVisible} animationType="fade" transparent onRequestClose={closeAndResetModal}>
-      {/* Containner de todo el modal */}
       <View style={styles.modalBackground}>
         <View style={styles.modalContainer}>
-          {/* Titulo de la vista */}
-          <Text style={styles.modalTitle}>Gestión de Cuenta</Text>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Gestión de Cuenta</Text>
+            <TouchableOpacity onPress={closeAndResetModal} style={styles.closeButton}>
+              <X size={20} color="#333" />
+            </TouchableOpacity>
+          </View>
 
-          {/* Contenido de todo el modal */}
           {renderModalContent()}
 
-          {/* Botón de cerrar/ocultar el modal */}
-          <TouchableOpacity style={styles.modalButtonClose} onPress={closeAndResetModal}>
-            <Text style={styles.modalButtonText}>Cerrar</Text>
-          </TouchableOpacity>
+          {activeOption !== "" && (
+            <TouchableOpacity style={styles.backOptionButton} onPress={() => setActiveOption("")}>
+              <Text style={styles.backOptionText}>Volver</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
     </Modal>
   )
 }
 
-//responsive design -----------------------------------------------------------------------------------------
-
 const { width, height } = Dimensions.get("window")
 // Calculate responsive size based on screen width
-const responsiveSize = (size: any) => {
+const responsiveSize = (size: number) => {
   return (width / 375) * size // 375 is used as base width (iPhone X)
 }
 // Calculate responsive height based on screen height
-const responsiveHeight = (size: any) => {
+const responsiveHeight = (size: number) => {
   return (height / 812) * size // 812 is used as base height (iPhone X)
 }
+
 const styles = StyleSheet.create({
   modalBackground: {
     flex: 1,
@@ -223,66 +217,80 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContainer: {
-    width: "80%",
-    backgroundColor: "#FFE5B4",
-    borderRadius: responsiveSize(10),
+    width: "85%",
+    backgroundColor: "#FFFFFF",
+    borderRadius: responsiveSize(12),
     padding: responsiveSize(20),
     alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.3,
     shadowRadius: responsiveSize(10),
     elevation: 5,
-    maxHeight: height * 0.8, // Maximum height of 80% of screen height
+    maxHeight: height * 0.8,
+  },
+  modalHeader: {
+    width: "100%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: responsiveSize(15),
   },
   modalTitle: {
-    fontSize: responsiveSize(24),
+    fontSize: responsiveSize(20),
     fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: responsiveSize(20),
+    color: "#333",
+  },
+  closeButton: {
+    padding: 5,
   },
   modalOptionsContainer: {
     width: "100%",
     marginVertical: responsiveSize(10),
-    alignItems: "center",
   },
   modalOptionButton: {
     width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
     padding: responsiveSize(15),
     marginVertical: responsiveSize(5),
-    backgroundColor: "#f0f0f0",
-    borderRadius: responsiveSize(10),
-    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderRadius: responsiveSize(8),
+  },
+  optionIcon: {
+    marginRight: 12,
   },
   modalOptionText: {
     fontSize: responsiveSize(16),
-    fontWeight: "bold",
-    textAlign: "center",
+    fontWeight: "600",
   },
   modalContent: {
-    marginVertical: responsiveSize(20),
+    marginVertical: responsiveSize(10),
     width: "100%",
   },
   modalSubtitle: {
     fontSize: responsiveSize(18),
     fontWeight: "bold",
     marginBottom: responsiveSize(15),
+    color: "#333",
   },
   modalInput: {
     width: "100%",
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: responsiveSize(5),
-    padding: responsiveSize(10),
+    borderColor: "#ddd",
+    borderRadius: responsiveSize(8),
+    padding: responsiveSize(12),
     marginBottom: responsiveSize(10),
+    backgroundColor: "#f9f9f9",
   },
   modalCheckboxContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: responsiveSize(10),
+    marginBottom: responsiveSize(15),
   },
   modalCheckboxLabel: {
     marginLeft: responsiveSize(10),
     fontSize: responsiveSize(14),
+    color: "#555",
   },
   modalErrorText: {
     color: "red",
@@ -292,9 +300,9 @@ const styles = StyleSheet.create({
   modalButtonPassword: {
     backgroundColor: "#007BFF",
     width: "100%",
-    height: responsiveHeight(40),
-    marginBottom: responsiveSize(15),
-    borderRadius: responsiveSize(5),
+    height: responsiveHeight(45),
+    marginBottom: responsiveSize(10),
+    borderRadius: responsiveSize(8),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -302,26 +310,17 @@ const styles = StyleSheet.create({
     backgroundColor: "red",
     width: "100%",
     height: responsiveHeight(45),
-    marginBottom: responsiveSize(20),
-    borderRadius: responsiveSize(5),
+    marginBottom: responsiveSize(10),
+    borderRadius: responsiveSize(8),
     justifyContent: "center",
     alignItems: "center",
   },
   modalButtonLogout: {
-    backgroundColor: "orange",
+    backgroundColor: "#FF8C00",
     width: "100%",
     height: responsiveHeight(45),
-    marginBottom: responsiveSize(20),
-    borderRadius: responsiveSize(5),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalButtonClose: {
-    width: "100%",
-    height: responsiveHeight(40),
-    backgroundColor: "brown",
-    borderRadius: responsiveSize(5),
     marginBottom: responsiveSize(10),
+    borderRadius: responsiveSize(8),
     justifyContent: "center",
     alignItems: "center",
   },
@@ -331,9 +330,22 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   disabledButton: {
-    backgroundColor: "#d3d3d3", // Color gris cuando está deshabilitado
+    backgroundColor: "#d3d3d3",
+  },
+  backOptionButton: {
+    width: "100%",
+    padding: responsiveSize(12),
+    backgroundColor: "#f0f0f0",
+    borderRadius: responsiveSize(8),
+    alignItems: "center",
+    marginTop: responsiveSize(5),
+  },
+  backOptionText: {
+    fontSize: responsiveSize(14),
+    color: "#555",
+    fontWeight: "500",
   },
 })
 
-export default ManageAccount
+export default SettingsModal
 
