@@ -316,6 +316,8 @@ const ListUserDevices: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Salto de linea improvisado xd*/}
+      <View style={{height: '5%'}} />
       <Text style={styles.title}>Dispositivos Creados</Text>
       <FlatList
         data={devices}

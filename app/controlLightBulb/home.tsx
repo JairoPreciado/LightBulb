@@ -56,7 +56,7 @@ const HomeScreen = () => {
       } catch (error) {
         console.error('Error verificando la expiración de la API Key:', error);
       }
-    }, 150000); // Se verifica cada 5 segundos
+    }, 10000); // Se verifica cada 5 segundos
   
     return () => clearInterval(intervalId);
   }, []);
@@ -135,8 +135,8 @@ const styles = StyleSheet.create({
   },
   settingsContainer: {
     position: 'absolute',
-    top: '3%',
-    right: '3%',
+    top: 10,
+    right: 10,
   },
   text: {
     fontSize: 22,

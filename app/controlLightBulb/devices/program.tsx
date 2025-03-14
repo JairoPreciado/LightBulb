@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, Text, TextInput, Alert, StyleSheet, TouchableOpacity, FlatList, AppState 
-} from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../../../firebaseConfiguration';
-import * as Notifications from 'expo-notifications';
-import * as TaskManager from 'expo-task-manager';
-import * as BackgroundFetch from 'expo-background-fetch';
-import { BackgroundFetchResult, BackgroundFetchStatus } from 'expo-background-fetch';
-import '../../../backgroundtask';
+import React, { useState, useEffect, useRef } from "react";
+import { View, Text, TextInput, Alert, StyleSheet, TouchableOpacity, FlatList, AppState} from "react-native";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { auth, db } from "../../../firebaseConfiguration";
+import * as Notifications from "expo-notifications";
+import * as TaskManager from "expo-task-manager";
+import * as BackgroundFetch from "expo-background-fetch";
+import { BackgroundFetchResult, BackgroundFetchStatus} from "expo-background-fetch";
+import "../../../backgroundtask";
+import Settings from "../settings";
 
-const BACKGROUND_FETCH_TASK = 'background-fetch';
+const BACKGROUND_FETCH_TASK = "background-fetch";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -32,17 +31,21 @@ interface Schedule {
 const Programar: React.FC = () => {
   const router = useRouter();
   // Se reciben deviceName (nombre del subdispositivo a programar), pin (por ejemplo, "D7") y deviceKey (clave del dispositivo completo en Firebase)
-  const { deviceName, pin, deviceKey } = useLocalSearchParams<{ deviceName: string; pin: string; deviceKey: string }>();
+  const { deviceName, pin, deviceKey } = useLocalSearchParams<{
+    deviceName: string;
+    pin: string;
+    deviceKey: string;
+  }>();
 
-  const [turnOnTime, setTurnOnTime] = useState({ hour: '', minute: '' });
-  const [turnOffTime, setTurnOffTime] = useState({ hour: '', minute: '' });
+  const [turnOnTime, setTurnOnTime] = useState({ hour: "", minute: "" });
+  const [turnOffTime, setTurnOffTime] = useState({ hour: "", minute: "" });
   const [scheduleList, setScheduleList] = useState<Schedule[]>([]);
   const appState = useRef(AppState.currentState);
 
   // Validar que se hayan recibido todos los parámetros
   useEffect(() => {
     if (!deviceName || !pin || !deviceKey) {
-      Alert.alert('Error', 'No se recibieron todos los datos del dispositivo.');
+      Alert.alert("Error", "No se recibieron todos los datos del dispositivo.");
       router.back();
     }
   }, [deviceName, pin, deviceKey, router]);
@@ -66,12 +69,13 @@ const Programar: React.FC = () => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
-      const userRef = doc(db, 'BD', userId);
+      const userRef = doc(db, "BD", userId);
       const userSnap = await getDoc(userRef);
       if (userSnap.exists()) {
         const data = userSnap.data();
         // Leer las programaciones almacenadas en Devices.[deviceKey].subdevices.[pin].horarios
-        const pinSchedules = data.Devices?.[deviceKey]?.subdevices?.[pin]?.horarios || {};
+        const pinSchedules =
+          data.Devices?.[deviceKey]?.subdevices?.[pin]?.horarios || {};
         const loadedSchedules: Schedule[] = Object.entries(pinSchedules).map(
           ([key, value]: [string, any]) => ({
             id: key,
@@ -83,10 +87,10 @@ const Programar: React.FC = () => {
         );
         setScheduleList(loadedSchedules);
       } else {
-        console.error('No se encontró información del usuario en Firebase.');
+        console.error("No se encontró información del usuario en Firebase.");
       }
     } catch (error) {
-      console.error('Error al cargar programaciones:', error);
+      console.error("Error al cargar programaciones:", error);
     }
   };
 
@@ -96,10 +100,12 @@ const Programar: React.FC = () => {
       status === BackgroundFetchStatus.Restricted ||
       status === BackgroundFetchStatus.Denied
     ) {
-      console.log('Background fetch deshabilitado');
+      console.log("Background fetch deshabilitado");
       return;
     }
-    const taskRegistered = await TaskManager.isTaskRegisteredAsync(BACKGROUND_FETCH_TASK);
+    const taskRegistered = await TaskManager.isTaskRegisteredAsync(
+      BACKGROUND_FETCH_TASK
+    );
     if (!taskRegistered) {
       await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
         minimumInterval: 60, // en segundos
@@ -110,22 +116,29 @@ const Programar: React.FC = () => {
   };
 
   TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
-    console.log('Background fetch task running');
+    console.log("Background fetch task running");
     await checkExpiredSchedules();
     return BackgroundFetchResult.NewData;
   });
 
   const requestNotificationPermission = async () => {
     const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permisos denegados', 'No se pueden enviar notificaciones sin permisos.');
+    if (status !== "granted") {
+      Alert.alert(
+        "Permisos denegados",
+        "No se pueden enviar notificaciones sin permisos."
+      );
     }
   };
 
   const checkExpiredSchedules = async () => {
     const now = new Date();
-    const validSchedules = scheduleList.filter(schedule => new Date(schedule.expiresAt) > now);
-    const expiredSchedules = scheduleList.filter(schedule => new Date(schedule.expiresAt) <= now);
+    const validSchedules = scheduleList.filter(
+      (schedule) => new Date(schedule.expiresAt) > now
+    );
+    const expiredSchedules = scheduleList.filter(
+      (schedule) => new Date(schedule.expiresAt) <= now
+    );
 
     for (const schedule of expiredSchedules) {
       for (const notifId of schedule.notificationIds) {
@@ -134,22 +147,25 @@ const Programar: React.FC = () => {
     }
     if (expiredSchedules.length > 0) {
       setScheduleList(validSchedules);
-      const firebaseSchedules = validSchedules.reduce((acc: { [key: string]: any }, schedule) => {
-        acc[schedule.id] = {
-          on: schedule.on,
-          off: schedule.off,
-          expiresAt: schedule.expiresAt,
-          notificationIds: schedule.notificationIds,
-        };
-        return acc;
-      }, {});
+      const firebaseSchedules = validSchedules.reduce(
+        (acc: { [key: string]: any }, schedule) => {
+          acc[schedule.id] = {
+            on: schedule.on,
+            off: schedule.off,
+            expiresAt: schedule.expiresAt,
+            notificationIds: schedule.notificationIds,
+          };
+          return acc;
+        },
+        {}
+      );
       await saveSchedulesToSubdeviceAndParticle(firebaseSchedules);
     }
   };
 
   const validateInput = (value: string, max: number): string => {
-    const numericValue = value.replace(/[^0-9]/g, '');
-    if (!numericValue) return '';
+    const numericValue = value.replace(/[^0-9]/g, "");
+    if (!numericValue) return "";
     const number = Math.min(Number(numericValue), max);
     return number.toString();
   };
@@ -160,21 +176,29 @@ const Programar: React.FC = () => {
     const turnOffHour = Number(turnOffTime.hour);
     const turnOffMinute = Number(turnOffTime.minute);
 
-    if (!turnOnTime.hour || !turnOnTime.minute || !turnOffTime.hour || !turnOffTime.minute) {
-      Alert.alert('Error', 'Por favor completa todos los campos.');
+    if (
+      !turnOnTime.hour ||
+      !turnOnTime.minute ||
+      !turnOffTime.hour ||
+      !turnOffTime.minute
+    ) {
+      Alert.alert("Error", "Por favor completa todos los campos.");
       return;
     }
 
     if (scheduleList.length > 0) {
-      Alert.alert('Programación existente', 'Solo puedes tener una programación activa a la vez.');
+      Alert.alert(
+        "Programación existente",
+        "Solo puedes tener una programación activa a la vez."
+      );
       return;
     }
 
     const newScheduleId = `Horario_${Date.now()}`;
     const newSchedule: Schedule = {
       id: newScheduleId,
-      on: `${turnOnHour}:${turnOnMinute.toString().padStart(2, '0')}`,
-      off: `${turnOffHour}:${turnOffMinute.toString().padStart(2, '0')}`,
+      on: `${turnOnHour}:${turnOnMinute.toString().padStart(2, "0")}`,
+      off: `${turnOffHour}:${turnOffMinute.toString().padStart(2, "0")}`,
       expiresAt: calculateExpiration(turnOffHour, turnOffMinute),
       notificationIds: [],
     };
@@ -184,40 +208,48 @@ const Programar: React.FC = () => {
     const updatedSchedules = [newSchedule];
     setScheduleList(updatedSchedules);
 
-    const firebaseSchedules = updatedSchedules.reduce((acc: { [key: string]: any }, schedule) => {
-      acc[schedule.id] = {
-        on: schedule.on,
-        off: schedule.off,
-        expiresAt: schedule.expiresAt,
-        notificationIds: schedule.notificationIds,
-      };
-      return acc;
-    }, {});
+    const firebaseSchedules = updatedSchedules.reduce(
+      (acc: { [key: string]: any }, schedule) => {
+        acc[schedule.id] = {
+          on: schedule.on,
+          off: schedule.off,
+          expiresAt: schedule.expiresAt,
+          notificationIds: schedule.notificationIds,
+        };
+        return acc;
+      },
+      {}
+    );
 
     await saveSchedulesToSubdeviceAndParticle(firebaseSchedules);
 
-    Alert.alert('Programación Guardada', `Encender a las ${newSchedule.on}\nApagar a las ${newSchedule.off}`);
-    setTurnOnTime({ hour: '', minute: '' });
-    setTurnOffTime({ hour: '', minute: '' });
+    Alert.alert(
+      "Programación Guardada",
+      `Encender a las ${newSchedule.on}\nApagar a las ${newSchedule.off}`
+    );
+    setTurnOnTime({ hour: "", minute: "" });
+    setTurnOffTime({ hour: "", minute: "" });
   };
 
-  const scheduleNotifications = async (schedule: Schedule): Promise<string[]> => {
+  const scheduleNotifications = async (
+    schedule: Schedule
+  ): Promise<string[]> => {
     const notificationIds: string[] = [];
     const onDate = getNextOccurrence(schedule.on);
     const offDate = getNextOccurrence(schedule.off);
-    console.log('Notificación encendido programada para:', onDate);
-    console.log('Notificación apagado programada para:', offDate);
+    console.log("Notificación encendido programada para:", onDate);
+    console.log("Notificación apagado programada para:", offDate);
 
     const onNotificationId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Subdispositivo Encendido',
+        title: "Subdispositivo Encendido",
         body: `El subdispositivo ${deviceName} (Pin ${pin}) se encendió a las ${schedule.on}`,
       },
       trigger: onDate,
     });
     const offNotificationId = await Notifications.scheduleNotificationAsync({
       content: {
-        title: 'Subdispositivo Apagado',
+        title: "Subdispositivo Apagado",
         body: `El subdispositivo ${deviceName} (Pin ${pin}) se apagó a las ${schedule.off}`,
       },
       trigger: offDate,
@@ -227,7 +259,7 @@ const Programar: React.FC = () => {
   };
 
   const getNextOccurrence = (time: string) => {
-    const [hour, minute] = time.split(':').map(Number);
+    const [hour, minute] = time.split(":").map(Number);
     const now = new Date();
     let scheduledTime = new Date();
     scheduledTime.setHours(hour, minute, 0, 0);
@@ -250,14 +282,16 @@ const Programar: React.FC = () => {
   };
 
   // Guardar programaciones en Firestore (dentro del subdispositivo) y enviar a Particle
-  const saveSchedulesToSubdeviceAndParticle = async (schedules: Record<string, any>) => {
+  const saveSchedulesToSubdeviceAndParticle = async (
+    schedules: Record<string, any>
+  ) => {
     try {
       const userId = auth.currentUser?.uid;
       if (!userId) return;
-      const userRef = doc(db, 'BD', userId);
+      const userRef = doc(db, "BD", userId);
       const userSnap = await getDoc(userRef);
       if (!userSnap.exists()) {
-        console.error('No se encontró el usuario en Firebase.');
+        console.error("No se encontró el usuario en Firebase.");
         return;
       }
       const userData = userSnap.data() || {};
@@ -285,12 +319,14 @@ const Programar: React.FC = () => {
         { merge: true }
       );
 
-      console.log('Programaciones guardadas en Firestore dentro del subdispositivo.');
+      console.log(
+        "Programaciones guardadas en Firestore dentro del subdispositivo."
+      );
 
       // Aquí obtenemos photonId y apikey desde el dispositivo, no desde la raíz
       const { photonId, apikey } = deviceData;
       if (!photonId || !apikey) {
-        console.error('No se encontró photonId o apikey en el dispositivo.');
+        console.error("No se encontró photonId o apikey en el dispositivo.");
         return;
       }
 
@@ -302,30 +338,37 @@ const Programar: React.FC = () => {
 
       await sendToParticle(photonId, apikey, toParticle);
     } catch (error) {
-      console.error('Error guardando programaciones:', error);
+      console.error("Error guardando programaciones:", error);
     }
   };
 
-  const sendToParticle = async (photonId: string, apiKey: string, schedulesObj: any) => {
+  const sendToParticle = async (
+    photonId: string,
+    apiKey: string,
+    schedulesObj: any
+  ) => {
     try {
       const schedulesString = JSON.stringify(schedulesObj);
-      const response = await fetch(`https://api.particle.io/v1/devices/${photonId}/actualizarHorarios`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: `args=${encodeURIComponent(schedulesString)}`,
-      });
+      const response = await fetch(
+        `https://api.particle.io/v1/devices/${photonId}/actualizarHorarios`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: `args=${encodeURIComponent(schedulesString)}`,
+        }
+      );
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error enviando horarios a Particle:', errorData);
+        console.error("Error enviando horarios a Particle:", errorData);
         return;
       }
       const data = await response.json();
-      console.log('Horarios enviados correctamente a Particle:', data);
+      console.log("Horarios enviados correctamente a Particle:", data);
     } catch (error) {
-      console.error('Error al enviar datos a Particle:', error);
+      console.error("Error al enviar datos a Particle:", error);
     }
   };
 
@@ -338,22 +381,29 @@ const Programar: React.FC = () => {
     }
     const updatedSchedules = scheduleList.filter((item) => item.id !== id);
     setScheduleList(updatedSchedules);
-    const firebaseSchedules = updatedSchedules.reduce((acc: { [key: string]: any }, schedule) => {
-      acc[schedule.id] = {
-        on: schedule.on,
-        off: schedule.off,
-        expiresAt: schedule.expiresAt,
-        notificationIds: schedule.notificationIds,
-      };
-      return acc;
-    }, {});
+    const firebaseSchedules = updatedSchedules.reduce(
+      (acc: { [key: string]: any }, schedule) => {
+        acc[schedule.id] = {
+          on: schedule.on,
+          off: schedule.off,
+          expiresAt: schedule.expiresAt,
+          notificationIds: schedule.notificationIds,
+        };
+        return acc;
+      },
+      {}
+    );
     await saveSchedulesToSubdeviceAndParticle(firebaseSchedules);
-    Alert.alert('Eliminado', 'Programación eliminada con éxito.');
+    Alert.alert("Eliminado", "Programación eliminada con éxito.");
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Programar Horario para {deviceName} (Pin: {pin})</Text>
+      {/* Salto de linea improvisado xd*/}
+      <View style={{ height: "10%" }} />
+      <Text style={styles.title}>
+        Programar Horario para {deviceName} (Pin: {pin})
+      </Text>
 
       <Text style={styles.label}>Hora de encendido</Text>
       <View style={styles.timeInputContainer}>
@@ -405,7 +455,10 @@ const Programar: React.FC = () => {
         />
       </View>
 
-      <TouchableOpacity style={styles.secondaryButton} onPress={handleSaveSchedule}>
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={handleSaveSchedule}
+      >
         <Text style={styles.secondaryButtonText}>Guardar Programación</Text>
       </TouchableOpacity>
 
@@ -423,7 +476,9 @@ const Programar: React.FC = () => {
           </View>
         )}
       />
-
+      <View style={styles.settingsContainer}>
+        <Settings />
+      </View>
       <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
         <Text style={styles.backButtonText}>←</Text>
       </TouchableOpacity>
@@ -437,82 +492,87 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: "#F5F5F5",
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   label: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginTop: 10,
     marginBottom: 5,
   },
   timeInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 20,
   },
   timeInput: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
     borderRadius: 5,
     padding: 10,
     marginHorizontal: 5,
     width: 60,
-    textAlign: 'center',
-    backgroundColor: '#fff',
+    textAlign: "center",
+    backgroundColor: "#fff",
   },
   separator: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   secondaryButton: {
-    backgroundColor: '#007BFF',
+    backgroundColor: "#007BFF",
     paddingVertical: 10,
     paddingHorizontal: 15,
     marginHorizontal: 5,
     marginTop: 20,
     borderRadius: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   secondaryButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   scheduleItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 5,
     marginVertical: 5,
   },
   scheduleText: {
     fontSize: 16,
-    color: '#333',
+    color: "#333",
   },
   deleteText: {
-    color: 'red',
+    color: "red",
     fontSize: 14,
   },
   backButton: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 20,
     left: 20,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: '#ddd',
+    backgroundColor: "#ddd",
     borderRadius: 5,
   },
   backButtonText: {
     fontSize: 18,
-    color: '#333',
+    color: "#333",
+  },
+  settingsContainer: {
+    position: "absolute",
+    top: 10,
+    right: 10,
   },
 });

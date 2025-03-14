@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  TextInput,
-  Modal,
-  Alert,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Modal, Alert} from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { auth, db } from "../../../firebaseConfiguration";
 import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
@@ -291,6 +282,8 @@ const ListSubDevices: React.FC = () => {
 
   return (
     <View style={styles.container}>
+      {/* Salto de linea improvisado xd*/}
+            <View style={{height: '5%'}} />
       <Text style={styles.title}>Subdispositivos</Text>
 
       {/* Formulario para agregar subdispositivos (agregado) */}
