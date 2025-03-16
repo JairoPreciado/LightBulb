@@ -1,68 +1,93 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet,} from "react-native";
-import { Picker } from "@react-native-picker/picker";
-import { auth, db } from "../../../firebaseConfiguration";
-import { doc, setDoc } from "firebase/firestore";
-import { useRouter } from "expo-router";
-import Checkbox from "expo-checkbox";
-import Settings from "../settings"; // Asegúrate de importar tu componente Settings
+"use client"
+
+import { useState } from "react"
+import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, ScrollView } from "react-native"
+import { auth, db } from "../../../firebaseConfiguration"
+import { doc, setDoc } from "firebase/firestore"
+import { useRouter } from "expo-router"
+import Checkbox from "expo-checkbox"
+import { Key, Database } from "lucide-react-native"
+import Navbar from "../../components/navbar"
+import BottomNavbar from "../../components/bottom-navbar"
+import SettingsModal from "../settings-modal"
 
 const AddDevice = () => {
-  const router = useRouter(); // Hook para la navegación
-  const [photonId, setPhotonId] = useState("");
-  const [distinctName, setDistinctName] = useState(""); // Nuevo campo para el nombre distintivo
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [apiKey, setApiKey] = useState("");
-  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter()
+  const [photonId, setPhotonId] = useState("")
+  const [distinctName, setDistinctName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [apiKey, setApiKey] = useState("")
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [modalVisible, setModalVisible] = useState(false)
 
   // Validaciones
-  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-F]+$/.test(photonId);
-  const isEmailValid = email.includes("@");
-  const isPasswordValid = password.length > 0;
+  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-F]+$/.test(photonId)
+  const isEmailValid = email.includes("@")
+  const isPasswordValid = password.length > 0
+  const isDistinctNameValid = distinctName.trim().length > 0
+
+  const handleSettingsPress = () => {
+    setModalVisible(true)
+  }
 
   // Generar clave de acceso sin expiración (se usará Never por defecto)
   const handleGenerateApiKey = async () => {
-    setIsGeneratingKey(true);
+    if (!isEmailValid || !isPasswordValid) {
+      Alert.alert("Error", "Por favor ingresa un correo y contraseña válidos.")
+      return
+    }
+
+    setIsGeneratingKey(true)
     try {
-      const requestBody = `username=${encodeURIComponent(
-        email
-      )}&password=${encodeURIComponent(
-        password
-      )}&grant_type=password&client_id=particle&client_secret=particle`;
+      const requestBody = `username=${encodeURIComponent(email)}&password=${encodeURIComponent(
+        password,
+      )}&grant_type=password&client_id=particle&client_secret=particle`
 
       const response = await fetch("https://api.particle.io/oauth/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: requestBody,
-      });
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (response.ok) {
-        setApiKey(data.access_token);
-        Alert.alert("Éxito", "Clave generada correctamente.");
+        setApiKey(data.access_token)
+        Alert.alert("Éxito", "Clave generada correctamente.")
       } else {
-        Alert.alert(
-          "Error",
-          `No se pudo generar la clave: ${data.error_description}`
-        );
+        Alert.alert("Error", `No se pudo generar la clave: ${data.error_description}`)
       }
     } catch (error) {
-      Alert.alert("Error", "Ocurrió un error al generar la clave.");
+      Alert.alert("Error", "Ocurrió un error al generar la clave.")
     } finally {
-      setIsGeneratingKey(false);
+      setIsGeneratingKey(false)
     }
-  };
+  }
 
   // Guardar en la base de datos (incluyendo la expiración)
   const handleSaveToDatabase = async () => {
+    if (!isPhotonIdValid) {
+      Alert.alert("Error", "El ID del Photon debe tener 24 caracteres hexadecimales.")
+      return
+    }
+
+    if (!isDistinctNameValid) {
+      Alert.alert("Error", "Por favor ingresa un nombre distintivo para el dispositivo.")
+      return
+    }
+
+    if (!apiKey) {
+      Alert.alert("Error", "Por favor genera una clave API primero.")
+      return
+    }
+
     try {
-      const userId = auth.currentUser?.uid;
+      const userId = auth.currentUser?.uid
       if (!userId) {
-        Alert.alert("Error", "Usuario no autenticado.");
-        return;
+        Alert.alert("Error", "Usuario no autenticado.")
+        return
       }
 
       // Estructura para el dispositivo
@@ -71,219 +96,241 @@ const AddDevice = () => {
         apikey: apiKey,
         name: distinctName,
         expiresAt: "Never", // Por defecto, sin expiración
-        subdevices: {} // Aquí puedes inicializar los subdispositivos, si los hay
-      };
-      
-      await setDoc(
-        doc(db, "BD", userId),
-        { Devices: { [distinctName]: deviceData } },
-        { merge: true }
-      );
+        subdevices: {}, // Aquí puedes inicializar los subdispositivos, si los hay
+      }
 
-      Alert.alert("Éxito", "Datos guardados correctamente.");
-      setPhotonId("");
-      setApiKey("");
-      setDistinctName("");
+      await setDoc(doc(db, "BD", userId), { Devices: { [distinctName]: deviceData } }, { merge: true })
+
+      Alert.alert("Éxito", "Dispositivo guardado correctamente.", [
+        {
+          text: "OK",
+          onPress: () => {
+            setPhotonId("")
+            setApiKey("")
+            setDistinctName("")
+            setEmail("")
+            setPassword("")
+            router.push("../devices/listDevices")
+          },
+        },
+      ])
     } catch (error: any) {
       if (error.code === "permission-denied") {
-        Alert.alert(
-          "Error",
-          "No tienes permisos para escribir en la base de datos."
-        );
+        Alert.alert("Error", "No tienes permisos para escribir en la base de datos.")
       } else {
-        Alert.alert("Error", "No se pudieron guardar los datos.");
+        Alert.alert("Error", "No se pudieron guardar los datos.")
       }
     }
-  };
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Agregar Nuevo Dispositivo</Text>
+      <Navbar title="Agregar Dispositivo" onSettingsPress={handleSettingsPress} />
 
-      {!isPhotonIdValid && photonId.length > 0 && (
-        <Text style={styles.errorText}>
-          El ID debe tener 24 caracteres hexadecimales unicamente(0-9, A-F).
-        </Text>
-      )}
-      <TextInput
-        style={[styles.input, styles.espacio]}
-        placeholder="ID del Photon"
-        value={photonId}
-        onChangeText={(text) => setPhotonId(text.toUpperCase())}
-        autoCapitalize="characters"
-        maxLength={24}
-      />
+      <SettingsModal isVisible={modalVisible} onClose={() => setModalVisible(false)} />
 
-       {/* Nuevo campo para el nombre distintivo */}
-       <TextInput
-        style={[styles.input, styles.espacio]}
-        placeholder="Nombre distintivo del dispositivo"
-        value={distinctName}
-        onChangeText={setDistinctName}
-        maxLength={15}
-      />
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Información del Dispositivo</Text>
 
-      {!isEmailValid && email.length > 0 && (
-        <Text style={styles.errorText}>
-          Por favor, ingresa un correo válido.
-        </Text>
-      )}
-      <TextInput
-        style={styles.input}
-        placeholder="Correo Asociado a Particle"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>ID del Photon</Text>
+            <TextInput
+              style={[styles.input, !isPhotonIdValid && photonId.length > 0 && styles.inputError]}
+              placeholder="Ingresa el ID de 24 caracteres"
+              value={photonId}
+              onChangeText={(text) => setPhotonId(text.toUpperCase())}
+              autoCapitalize="characters"
+              maxLength={24}
+            />
+            {!isPhotonIdValid && photonId.length > 0 && (
+              <Text style={styles.errorText}>El ID debe tener 24 caracteres hexadecimales (0-9, A-F).</Text>
+            )}
+          </View>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Contraseña"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry={!showPassword}
-      />
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Nombre del Dispositivo</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Nombre distintivo del dispositivo"
+              value={distinctName}
+              onChangeText={setDistinctName}
+              maxLength={15}
+            />
+          </View>
+        </View>
 
-      {/* Checkbox para mostrar/ocultar contraseña */}
-      <View style={[styles.checkboxContainer, styles.espacio]}>
-        <Checkbox
-          value={showPassword}
-          onValueChange={setShowPassword}
-          color={showPassword ? "blue" : undefined}
-        />
-        <Text style={styles.checkboxLabel}>Mostrar Contraseña</Text>
-      </View>
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Credenciales de Particle</Text>
 
-      <Picker
-        selectedValue="Never"
-        style={[styles.picker, styles.espacio]}
-        enabled={false}
-      >
-        <Picker.Item label="Never" value="Never" />
-      </Picker>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Correo Electrónico</Text>
+            <TextInput
+              style={[styles.input, !isEmailValid && email.length > 0 && styles.inputError]}
+              placeholder="Correo asociado a Particle"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            {!isEmailValid && email.length > 0 && (
+              <Text style={styles.errorText}>Por favor, ingresa un correo válido.</Text>
+            )}
+          </View>
 
-      <TouchableOpacity
-        style={[
-          styles.secondaryButton,
-          (!isEmailValid || !isPasswordValid || isGeneratingKey) &&
-            styles.disabledButton,
-        ]}
-        onPress={handleGenerateApiKey}
-        disabled={!isEmailValid || !isPasswordValid || isGeneratingKey}
-      >
-        <Text style={styles.secondaryButtonText}>
-          {isGeneratingKey ? "Generando..." : "Generar Clave"}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Contraseña</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Contraseña de Particle"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
 
-      {apiKey && (
-        <TextInput
-          style={[styles.input, styles.readOnlyInput, styles.espacio]}
-          value={apiKey}
-          editable={false}
-        />
-      )}
+            <View style={styles.checkboxContainer}>
+              <Checkbox
+                value={showPassword}
+                onValueChange={setShowPassword}
+                color={showPassword ? "#007BFF" : undefined}
+              />
+              <Text style={styles.checkboxLabel}>Mostrar Contraseña</Text>
+            </View>
+          </View>
 
-      <TouchableOpacity
-        style={[
-          styles.secondaryButton,
-          (!isPhotonIdValid || !apiKey || !distinctName) && styles.disabledButton,
-        ]}
-        onPress={handleSaveToDatabase}
-        disabled={!isPhotonIdValid || !apiKey}
-      >
-        <Text style={styles.secondaryButtonText}>Guardar en Base de Datos</Text>
-      </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.actionButton,
+              (!isEmailValid || !isPasswordValid || isGeneratingKey) && styles.disabledButton,
+            ]}
+            onPress={handleGenerateApiKey}
+            disabled={!isEmailValid || !isPasswordValid || isGeneratingKey}
+          >
+            <Key size={20} color="#fff" style={{ marginRight: 8 }} />
+            <Text style={styles.actionButtonText}>{isGeneratingKey ? "Generando..." : "Generar Clave API"}</Text>
+          </TouchableOpacity>
+        </View>
 
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backButtonText}>←</Text>
-      </TouchableOpacity>
+        {apiKey && (
+          <View style={styles.formSection}>
+            <Text style={styles.sectionTitle}>Clave API Generada</Text>
+            <TextInput style={[styles.input, styles.apiKeyInput]} value={apiKey} editable={false} multiline />
 
-      <View style={styles.settingsContainer}>
-        <Settings />
-      </View>
+            <TouchableOpacity
+              style={[styles.saveButton, (!isPhotonIdValid || !isDistinctNameValid) && styles.disabledButton]}
+              onPress={handleSaveToDatabase}
+              disabled={!isPhotonIdValid || !isDistinctNameValid}
+            >
+              <Database size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.actionButtonText}>Guardar en Base de Datos</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+
+      {/* Barra de navegación inferior */}
+      <BottomNavbar />
     </View>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
-  settingsContainer: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-  },
   container: {
     flex: 1,
-    padding: 20,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: "#f5f5f5",
   },
-  title: {
-    fontSize: 20,
+  content: {
+    flex: 1,
+  },
+  contentContainer: {
+    padding: 16,
+  },
+  formSection: {
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 20,
-    marginTop: 100,
+    marginBottom: 16,
+    color: "#333",
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "500",
+    marginBottom: 8,
+    color: "#555",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#fff",
+    fontSize: 15,
   },
-  espacio: {
-    marginBottom: 40,
-  },
-  readOnlyInput: {
-    backgroundColor: "#f0f0f0",
+  inputError: {
+    borderColor: "#F44336",
   },
   errorText: {
-    color: "red",
+    color: "#F44336",
     fontSize: 12,
-    marginBottom: 10,
-  },
-  picker: {
-    height: 50,
-    marginBottom: 20,
-  },
-  secondaryButton: {
-    backgroundColor: "#007BFF",
-    borderRadius: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    marginBottom: 10,
-  },
-  secondaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  disabledButton: {
-    backgroundColor: "#d3d3d3",
-  },
-  backButton: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: "#ddd",
-    borderRadius: 5,
-  },
-  backButtonText: {
-    fontSize: 18,
-    color: "#333",
+    marginTop: 4,
   },
   checkboxContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 20,
-    width: "100%",
+    marginTop: 8,
   },
   checkboxLabel: {
     marginLeft: 8,
     fontSize: 14,
+    color: "#555",
   },
-});
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#007BFF",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  actionButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  apiKeyInput: {
+    backgroundColor: "#f9f9f9",
+    marginBottom: 16,
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  saveButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4CAF50",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+  },
+  disabledButton: {
+    backgroundColor: "#cccccc",
+  },
+})
 
-export default AddDevice;
+export default AddDevice
+

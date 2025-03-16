@@ -1,268 +1,305 @@
-import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Modal, Alert} from "react-native";
-import { useRouter, useLocalSearchParams } from "expo-router";
-import { auth, db } from "../../../firebaseConfiguration";
-import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
-import Settings from "../settings";
+"use client"
 
-const MAX_SUBDEVICES = 10;
-const VALID_PINS = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"];
+import type React from "react"
+import { useState, useEffect } from "react"
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, Modal, ScrollView } from "react-native"
+import { useRouter, useLocalSearchParams } from "expo-router"
+import { auth, db } from "../../../firebaseConfiguration"
+import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore"
+import { ChevronDown, Power, Clock, Edit, Trash2 } from "lucide-react-native"
+import Navbar from "../../components/navbar"
+import SettingsModal from "../settings-modal"
+import RNPickerSelect from 'react-native-picker-select';
+
+
+const VALID_PINS = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"]
+const MAX_SUBDEVICES = 10
+
+
 
 const ListSubDevices: React.FC = () => {
-  const { deviceKey } = useLocalSearchParams<{ deviceKey: string }>();
+  const { deviceKey } = useLocalSearchParams<{ deviceKey: string }>()
+  const [subdevices, setSubdevices] = useState<any[]>([])
+  const [selectedSubdevice, setSelectedSubdevice] = useState<any>(null)
+  const [modalVisible, setModalVisible] = useState(false)
+  const [activeOption, setActiveOption] = useState("")
+  const [updatedName, setUpdatedName] = useState("")
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false)
+  const [showPinSelector, setShowPinSelector] = useState(false)
+  const [newSubName, setNewSubName] = useState("")
+  const [selectedPin, setSelectedPin] = useState("")
+  const [deviceStates, setDeviceStates] = useState<{ [key: string]: boolean }>({})
+  const router = useRouter()
 
-  const [subdevices, setSubdevices] = useState<any[]>([]);
-  const [selectedSubdevice, setSelectedSubdevice] = useState<any>(null);
-  const [activeOption, setActiveOption] = useState("");
-  const [modalVisible, setModalVisible] = useState(false);
-  const [updatedName, setUpdatedName] = useState("");
-  const [newSubName, setNewSubName] = useState("");
-  const [newSubPin, setNewSubPin] = useState("");
-  const router = useRouter();
+  // Obtener los pines disponibles
+  const getAvailablePins = () => {
+    const usedPins = subdevices.map((s) => s.pin)
+    return VALID_PINS.filter((pin) => !usedPins.includes(pin))
+  }
 
-  // Cargar subdispositivos del dispositivo seleccionado
+  const availablePinsItems = getAvailablePins().map(pin => ({
+    label: pin,
+    value: pin,
+  }));
+
+  // Cargar subdispositivos y sus estados
   useEffect(() => {
     const loadSubdevices = async () => {
       if (!deviceKey) {
-        Alert.alert("Error", "No se especificó el dispositivo.");
-        return;
+        Alert.alert("Error", "No se especificó el dispositivo.")
+        return
       }
-      const userId = auth.currentUser?.uid;
+      const userId = auth.currentUser?.uid
       if (!userId) {
-        Alert.alert("Error", "Usuario no autenticado.");
-        return;
+        Alert.alert("Error", "Usuario no autenticado.")
+        return
       }
       try {
-        const userDocRef = doc(db, "BD", userId);
-        const snap = await getDoc(userDocRef);
+        const userDocRef = doc(db, "BD", userId)
+        const snap = await getDoc(userDocRef)
         if (snap.exists()) {
-          const data = snap.data();
-          const subObj = data.Devices?.[deviceKey]?.subdevices || {};
-          const loaded = Object.entries(subObj).map(
-            ([pin, sub]: [string, any]) => ({
-              name: sub.name,
-              pin,
-            })
-          );
-          setSubdevices(loaded);
-        } else {
-          Alert.alert("Error", "No se encontró información del usuario.");
+          const data = snap.data()
+          const subObj = data.Devices?.[deviceKey]?.subdevices || {}
+          const loaded = Object.entries(subObj).map(([pin, sub]: [string, any]) => ({
+            name: sub.name,
+            pin,
+            state: sub.state || false,
+          }))
+          setSubdevices(loaded)
+
+          // Inicializar estados
+          const states: { [key: string]: boolean } = {}
+          loaded.forEach((device) => {
+            states[device.pin] = device.state
+          })
+          setDeviceStates(states)
         }
       } catch (error) {
-        console.error("Error al cargar subdispositivos:", error);
-        Alert.alert("Error", "No se pudieron cargar los subdispositivos.");
+        console.error("Error al cargar subdispositivos:", error)
+        Alert.alert("Error", "No se pudieron cargar los subdispositivos.")
       }
-    };
-    loadSubdevices();
-  }, [deviceKey]);
+    }
+    loadSubdevices()
+  }, [deviceKey])
+
+  // Consultar el estado de los dispositivos periódicamente
+  useEffect(() => {
+    if (!deviceKey) return
+
+    const fetchDeviceStates = async () => {
+      try {
+        const userId = auth.currentUser?.uid
+        if (!userId) return
+
+        const userDocRef = doc(db, "BD", userId)
+        const userSnap = await getDoc(userDocRef)
+        if (!userSnap.exists()) return
+
+        const data = userSnap.data()
+        const deviceData = data.Devices?.[deviceKey]
+        const photonId = deviceData?.photonId
+        const apiKey = deviceData?.apikey
+
+        if (!photonId || !apiKey) return
+
+        // Consultar el estado de cada subdispositivo
+        for (const subdevice of subdevices) {
+          try {
+            const response = await fetch(`https://api.particle.io/v1/devices/${photonId}/estado${subdevice.pin}`, {
+              headers: { Authorization: `Bearer ${apiKey}` },
+            })
+
+            if (response.ok) {
+              const data = await response.json()
+              setDeviceStates((prev) => ({
+                ...prev,
+                [subdevice.pin]: data.result,
+              }))
+            }
+          } catch (error) {
+            console.error(`Error al consultar el estado del dispositivo ${subdevice.pin}:`, error)
+          }
+        }
+      } catch (error) {
+        console.error("Error al consultar estados:", error)
+      }
+    }
+
+    // Consultar estados inicialmente
+    fetchDeviceStates()
+
+    // Configurar intervalo para consultar estados
+    const interval = setInterval(fetchDeviceStates, 5000)
+
+    return () => clearInterval(interval)
+  }, [deviceKey, subdevices])
+
+  const handleSettingsPress = () => {
+    setSettingsModalVisible(true)
+  }
+
+  // Función para alternar el estado de un dispositivo
+  const toggleDevice = async (pin: string) => {
+    try {
+      const userId = auth.currentUser?.uid
+      if (!userId) return
+
+      // Obtener el photonId y apikey del dispositivo
+      const userDocRef = doc(db, "BD", userId)
+      const userSnap = await getDoc(userDocRef)
+      if (!userSnap.exists()) return
+
+      const data = userSnap.data()
+      const deviceData = data.Devices?.[deviceKey]
+      const photonId = deviceData?.photonId
+      const apiKey = deviceData?.apikey
+
+      if (!photonId || !apiKey) {
+        Alert.alert("Error", "No se encontró información del dispositivo.")
+        return
+      }
+
+      const newState = !deviceStates[pin]
+      const command = newState ? "on" : "off"
+
+      // Comunicarse con la API de Particle
+      const response = await fetch(`https://api.particle.io/v1/devices/${photonId}/cambiarEstado${pin}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: `arg=${command}`,
+      })
+
+      const responseData = await response.json()
+
+      if (response.ok && responseData.return_value === 1) {
+        // Actualizar el estado en Firestore
+        await updateDoc(userDocRef, {
+          [`Devices.${deviceKey}.subdevices.${pin}.state`]: newState,
+        })
+
+        // Actualizar el estado local
+        setDeviceStates((prev) => ({
+          ...prev,
+          [pin]: newState,
+        }))
+
+        Alert.alert("Éxito", `Dispositivo ${newState ? "encendido" : "apagado"} correctamente`)
+      } else {
+        Alert.alert("Error", "No se pudo cambiar el estado del dispositivo.")
+      }
+    } catch (error) {
+      console.error("Error al cambiar el estado:", error)
+      Alert.alert("Error", "No se pudo cambiar el estado del dispositivo.")
+    }
+  }
 
   // Agregar un nuevo subdispositivo
   const addSubdevice = async () => {
     if (!deviceKey) {
-      Alert.alert("Error", "No se especificó el dispositivo.");
-      return;
+      Alert.alert("Error", "No se especificó el dispositivo.")
+      return
     }
     if (subdevices.length >= MAX_SUBDEVICES) {
-      Alert.alert(
-        "Límite alcanzado",
-        `Solo puedes agregar un máximo de ${MAX_SUBDEVICES} subdispositivos.`
-      );
-      return;
+      Alert.alert("Límite alcanzado", `Solo puedes agregar un máximo de ${MAX_SUBDEVICES} subdispositivos.`)
+      return
     }
-    if (!newSubName || !newSubPin) {
-      Alert.alert("Error", "Por favor ingresa un nombre y un pin.");
-      return;
+    if (!newSubName || !selectedPin) {
+      Alert.alert("Error", "Por favor ingresa un nombre y selecciona un pin.")
+      return
     }
-    if (!VALID_PINS.includes(newSubPin)) {
-      Alert.alert("Error", "Pin no válido (D0, D1, D2, D3, D4, D5, D6, D7).");
-      return;
-    }
-    if (subdevices.some((s) => s.pin === newSubPin)) {
-      Alert.alert("Error", "El pin ya está asignado a otro subdispositivo.");
-      return;
-    }
-    const userId = auth.currentUser?.uid;
+
+    const userId = auth.currentUser?.uid
     if (!userId) {
-      Alert.alert("Error", "Usuario no autenticado.");
-      return;
+      Alert.alert("Error", "Usuario no autenticado.")
+      return
     }
     try {
-      const docRef = doc(db, "BD", userId);
+      const docRef = doc(db, "BD", userId)
       await updateDoc(docRef, {
-        [`Devices.${deviceKey}.subdevices.${newSubPin}`]: {
+        [`Devices.${deviceKey}.subdevices.${selectedPin}`]: {
           name: newSubName,
-          pin: newSubPin,
+          pin: selectedPin,
           state: false,
         },
-      });
-      setSubdevices((prev) => [...prev, { name: newSubName, pin: newSubPin }]);
-      setNewSubName("");
-      setNewSubPin("");
-      Alert.alert("Éxito", "Subdispositivo creado correctamente.");
+      })
+      setSubdevices((prev) => [...prev, { name: newSubName, pin: selectedPin, state: false }])
+      setDeviceStates((prev) => ({
+        ...prev,
+        [selectedPin]: false,
+      }))
+      setNewSubName("")
+      setSelectedPin("")
+      Alert.alert("Éxito", "Subdispositivo creado correctamente.")
     } catch (error) {
-      console.error("Error al agregar subdispositivo:", error);
-      Alert.alert("Error", "No se pudo agregar el subdispositivo.");
+      console.error("Error al agregar subdispositivo:", error)
+      Alert.alert("Error", "No se pudo agregar el subdispositivo.")
     }
-  };
+  }
 
-  // Funciones de actualización
+  // Añadir la función para actualizar el nombre del subdispositivo
   const updateSubdeviceName = async () => {
-    if (!selectedSubdevice) return;
-    const userId = auth.currentUser?.uid;
+    if (!selectedSubdevice) return
+    const userId = auth.currentUser?.uid
     if (!userId) {
-      Alert.alert("Error", "Usuario no autenticado.");
-      return;
+      Alert.alert("Error", "Usuario no autenticado.")
+      return
     }
     try {
-      const docRef = doc(db, "BD", userId);
-      const newName =
-        updatedName.trim() === "" ? selectedSubdevice.name : updatedName;
+      const docRef = doc(db, "BD", userId)
+      const newName = updatedName.trim() === "" ? selectedSubdevice.name : updatedName
       await updateDoc(docRef, {
-        [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}.name`]:
-          newName,
-      });
-      setSubdevices((prev) =>
-        prev.map((sd) =>
-          sd.pin === selectedSubdevice.pin ? { ...sd, name: newName } : sd
-        )
-      );
-      setModalVisible(false);
-      setActiveOption("");
-      Alert.alert(
-        "Éxito",
-        "Nombre del subdispositivo actualizado correctamente."
-      );
+        [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}.name`]: newName,
+      })
+      setSubdevices((prev) => prev.map((sd) => (sd.pin === selectedSubdevice.pin ? { ...sd, name: newName } : sd)))
+      setModalVisible(false)
+      setActiveOption("")
+      Alert.alert("Éxito", "Nombre del subdispositivo actualizado correctamente.")
     } catch (error) {
-      console.error("Error al actualizar el nombre del subdispositivo:", error);
-      Alert.alert(
-        "Error",
-        "No se pudo actualizar el nombre del subdispositivo."
-      );
+      console.error("Error al actualizar el nombre del subdispositivo:", error)
+      Alert.alert("Error", "No se pudo actualizar el nombre del subdispositivo.")
     }
-  };
+  }
 
-  // Funcion de eliminación
+  // Añadir la función para eliminar el subdispositivo
   const deleteSubdevice = async () => {
-    if (!selectedSubdevice) return;
-    const userId = auth.currentUser?.uid;
+    if (!selectedSubdevice) return
+    const userId = auth.currentUser?.uid
     if (!userId) {
-      Alert.alert("Error", "Usuario no autenticado.");
-      return;
+      Alert.alert("Error", "Usuario no autenticado.")
+      return
     }
-    Alert.alert(
-      "Confirmación",
-      "¿Estás seguro de que deseas eliminar este subdispositivo?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        {
-          text: "Eliminar",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const docRef = doc(db, "BD", userId);
-              await updateDoc(docRef, {
-                [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}`]:
-                  deleteField(),
-              });
-              setSubdevices((prev) =>
-                prev.filter((sd) => sd.pin !== selectedSubdevice.pin)
-              );
-              setModalVisible(false);
-              setActiveOption("");
-              Alert.alert("Éxito", "Subdispositivo eliminado correctamente.");
-            } catch (error) {
-              console.error("Error al eliminar el subdispositivo:", error);
-              Alert.alert("Error", "No se pudo eliminar el subdispositivo.");
-            }
-          },
+    Alert.alert("Confirmación", "¿Estás seguro de que deseas eliminar este subdispositivo?", [
+      { text: "Cancelar", style: "cancel" },
+      {
+        text: "Eliminar",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const docRef = doc(db, "BD", userId)
+            await updateDoc(docRef, {
+              [`Devices.${deviceKey}.subdevices.${selectedSubdevice.pin}`]: deleteField(),
+            })
+            setSubdevices((prev) => prev.filter((sd) => sd.pin !== selectedSubdevice.pin))
+            setModalVisible(false)
+            setActiveOption("")
+            Alert.alert("Éxito", "Subdispositivo eliminado correctamente.")
+          } catch (error) {
+            console.error("Error al eliminar el subdispositivo:", error)
+            Alert.alert("Error", "No se pudo eliminar el subdispositivo.")
+          }
         },
-      ]
-    );
-  };
+      },
+    ])
+  }
 
-  // Restaurar el modal a su estado inicial
-  const handleModalClose = () => {
-    setModalVisible(false);
-    setActiveOption("");
-  };
-
-  // Renderizar el contenido del modal
-  const renderModalContent = () => {
-    switch (activeOption) {
-      case "updateName":
-        return (
-          <View style={styles.modalContent}>
-            <Text style={styles.modalLabel}>Editar Nombre</Text>
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Nombre actual"
-              value={selectedSubdevice ? selectedSubdevice.name : ""}
-              editable={false}
-            />
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Nuevo nombre (opcional)"
-              value={updatedName}
-              onChangeText={setUpdatedName}
-            />
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={updateSubdeviceName}
-            >
-              <Text style={styles.secondaryButtonText}>Actualizar nombre</Text>
-            </TouchableOpacity>
-          </View>
-        );
-      case "delete":
-        return (
-          <View style={styles.modalContent}>
-            <TouchableOpacity
-              style={styles.secondaryButton2}
-              onPress={deleteSubdevice}
-            >
-              <Text style={styles.secondaryButtonText}>
-                Borrar Subdispositivo
-              </Text>
-            </TouchableOpacity>
-          </View>
-        );
-      default:
-        return (
-          <View style={styles.modalOptionsContainer}>
-            <TouchableOpacity
-              style={styles.modalOptionButton}
-              onPress={() => setActiveOption("updateName")}
-            >
-              <Text style={styles.modalOptionText}>Actualizar Nombre</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.modalOptionButton}
-              onPress={() => setActiveOption("delete")}
-            >
-              <Text style={[styles.modalOptionText, { color: "red" }]}>
-                Eliminar Subdispositivo
-              </Text>
-            </TouchableOpacity>
-          </View>
-        );
-    }
-  };
-
-  // Renderizar la lista de subdispositivos
   const renderItem = ({ item }: { item: any }) => (
     <View style={styles.deviceItem}>
       <TouchableOpacity
-        style={styles.optionsButton}
-        onPress={() => {
-          setSelectedSubdevice(item);
-          setModalVisible(true);
-        }}
-      >
-        <Text style={styles.optionsButtonText}>≡</Text>
-      </TouchableOpacity>
-      <TouchableOpacity
         style={styles.deviceButton}
-        onPress={() => {
+        onPress={() =>
           router.push({
             pathname: "./devices",
             params: {
@@ -270,275 +307,532 @@ const ListSubDevices: React.FC = () => {
               pin: item.pin,
               deviceKey: deviceKey,
             },
-          });
-        }}
+          })
+        }
       >
-        <Text style={styles.deviceText}>
-          {item.name} (Pin: {item.pin})
-        </Text>
+        <View style={styles.deviceInfo}>
+          <Text style={styles.deviceName}>{item.name}</Text>
+          <Text style={styles.devicePin}>Pin: {item.pin}</Text>
+        </View>
       </TouchableOpacity>
+
+      <View style={styles.deviceActions}>
+        <TouchableOpacity
+          style={[styles.actionButton, deviceStates[item.pin] ? styles.powerButtonOn : styles.powerButtonOff]}
+          onPress={() => toggleDevice(item.pin)}
+        >
+          <Power size={20} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.actionButton, styles.programButton]}
+          onPress={() =>
+            router.push({
+              pathname: "./program",
+              params: {
+                deviceName: item.name,
+                pin: item.pin,
+                deviceKey: deviceKey,
+              },
+            })
+          }
+        >
+          <Clock size={20} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+  style={[styles.actionButton, styles.editButton]}
+  onPress={() => {
+    setSelectedSubdevice(item);
+    setUpdatedName("");
+    setActiveOption(""); // Aseguramos que se muestre el menú principal
+    setModalVisible(true);
+  }}
+>
+  <Edit size={20} color="#fff" />
+</TouchableOpacity>
+
+      </View>
     </View>
-  );
+  )
 
   return (
     <View style={styles.container}>
-      {/* Salto de linea improvisado xd*/}
-            <View style={{height: '5%'}} />
-      <Text style={styles.title}>Subdispositivos</Text>
+      <Navbar title="Subdispositivos" onSettingsPress={handleSettingsPress} />
 
-      {/* Formulario para agregar subdispositivos (agregado) */}
-      <View style={styles.formContainer}>
-        {/* Agregar un campo para ingresar el nombre del subdispositivo */}
-        <TextInput
-          style={styles.input}
-          placeholder="Nombre del subdispositivo"
-          value={newSubName}
-          onChangeText={setNewSubName}
-          maxLength={20}
-        />
+      <SettingsModal isVisible={settingsModalVisible} onClose={() => setSettingsModalVisible(false)} />
 
-        {/* Agregar un campo para ingresar el pin del subdispositivo*/}
-        <TextInput
-          style={styles.input}
-          placeholder="Pin (D0, D1, D2, D3, D4, D5, D6, D7)"
-          value={newSubPin}
-          onChangeText={setNewSubPin}
-          maxLength={2}
+      <View style={styles.content}>
+        {/* Formulario para agregar subdispositivos */}
+        <View style={styles.formContainer}>
+          <Text style={styles.formTitle}>Agregar nuevo subdispositivo</Text>
+
+          <TextInput
+            style={styles.input}
+            placeholder="Nombre del subdispositivo"
+            value={newSubName}
+            onChangeText={setNewSubName}
+            maxLength={20}
+          />
+
+          <View style={styles.selectContainer}>
+            <RNPickerSelect
+              onValueChange={(value) => setSelectedPin(value)}
+              items={getAvailablePins().map(pin => ({ label: pin, value: pin }))}
+              placeholder={{ label: 'Seleccionar Pin', value: null }}
+              value={selectedPin}
+              style={pickerSelectStyles}
+              useNativeAndroidPickerStyle={false}
+              Icon={() => (
+                <ChevronDown
+                  color="#777"
+                  size={20}
+                  style={{
+                    position: 'absolute',
+                    right: 15, 
+                    top: '40%', 
+                    transform: [{ translateY: 5 }], 
+                  }}
+                />
+              )}
+            />
+
+          </View>
+
+
+          <TouchableOpacity
+            style={[styles.addButton, (!newSubName || !selectedPin) && styles.disabledButton]}
+            onPress={addSubdevice}
+            disabled={!newSubName || !selectedPin}
+          >
+            <Text style={styles.addButtonText}>Crear Subdispositivo</Text>
+          </TouchableOpacity>
+        </View>
+
+        <FlatList
+          data={subdevices}
+          keyExtractor={(item) => item.pin}
+          renderItem={renderItem}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No hay subdispositivos creados aún.</Text>
+            </View>
+          }
         />
-        <TouchableOpacity style={styles.addButton} onPress={addSubdevice}>
-          <Text style={styles.addButtonText}>Crear Subdispositivo</Text>
-        </TouchableOpacity>
       </View>
-      
-      {/* Renderizar la lista de subdispositivos*/}
-      <FlatList
-        data={subdevices}
-        keyExtractor={(item) => item.pin}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            No hay subdispositivos creados aún.
-          </Text>
-        }
-      />
 
-      {/*Modal para gestionar subdispositivos*/}
-      <Modal
-        visible={modalVisible}
-        animationType="fade"
-        transparent
-        onRequestClose={handleModalClose}
-      >
+      {/* Modal para gestionar subdispositivos */}
+      <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalBackground}>
           <View style={styles.modalContainer}>
-            <Text style={styles.modalTitle}>Gestión del Subdispositivo</Text>
-            {renderModalContent()}
-            <TouchableOpacity
-              style={styles.modalOptionButtonClose}
-              onPress={handleModalClose}
-            >
-              <Text style={styles.modalOptionText}>Cerrar</Text>
-            </TouchableOpacity>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Gestión del Subdispositivo</Text>
+              <TouchableOpacity
+  onPress={() => {
+    setActiveOption(""); // Reinicia la opción activa
+    setModalVisible(false);
+  }}
+  style={styles.closeButton}
+>
+  <Text style={styles.closeButtonText}>✕</Text>
+</TouchableOpacity>
+
+            </View>
+
+            {activeOption === "updateName" ? (
+              <View style={styles.modalContent}>
+                <Text style={styles.modalLabel}>Editar Nombre</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Nombre actual"
+                  value={selectedSubdevice ? selectedSubdevice.name : ""}
+                  editable={false}
+                />
+                <TextInput
+                  style={styles.modalInput}
+                  placeholder="Nuevo nombre (opcional)"
+                  value={updatedName}
+                  onChangeText={setUpdatedName}
+                />
+<TouchableOpacity style={styles.updateButton} onPress={updateSubdeviceName}>
+  <Text style={styles.updateButtonText}>Actualizar nombre</Text>
+</TouchableOpacity>
+
+              </View>
+            ) : activeOption === "delete" ? (
+              <View style={styles.modalContent}>
+                <TouchableOpacity style={styles.deleteButton} onPress={deleteSubdevice}>
+                  <Text style={styles.actionButtonText}>Borrar Subdispositivo</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.modalOptionsContainer}>
+                <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("updateName")}>
+                  <Edit size={20} color="#333" style={styles.optionIcon} />
+                  <Text style={styles.modalOptionText}>Actualizar Nombre</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("delete")}>
+                  <Trash2 size={20} color="red" style={styles.optionIcon} />
+                  <Text style={[styles.modalOptionText, { color: "red" }]}>Eliminar Subdispositivo</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </View>
       </Modal>
-
-      <View style={styles.settingsContainer}>
-        <Settings />
-      </View>
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <Text style={styles.backButtonText}>←</Text>
-      </TouchableOpacity>
     </View>
-  );
-};
+  )
+}
 
-export default ListSubDevices;
+const pickerSelectStyles = StyleSheet.create({
+  inputIOS: {
+    fontSize: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    color: '#333',
+    paddingRight: 30,
+    backgroundColor: '#fff',
+  },
+  inputAndroid: {
+    fontSize: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    color: '#333',
+    paddingRight: 30,
+    backgroundColor: '#fff',
+  },
+});
 
-// Estilos
+
+
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#f5f5f5",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 20,
-    textAlign: "center",
+  content: {
+    flex: 1,
+    padding: 16,
   },
-  // Estilos para el formulario de creación (agregados)
   formContainer: {
-    marginBottom: 20,
-    backgroundColor: "#e6e6e6",
+    backgroundColor: "#ffffff",
     borderRadius: 10,
-    padding: 15,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  formTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 12,
+    color: "#333",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginBottom: 10,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
     backgroundColor: "#fff",
+    fontSize: 15,
+  },
+  selectContainer: {
+    position: "relative",
+    marginBottom: 12,
+    zIndex: 1,
+  },
+  selectButton: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#fff",
+  },
+  selectedValue: {
+    color: "#333",
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  placeholderValue: {
+    color: "#999",
+    fontSize: 15,
+  },
+  dropdown: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginTop: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 2,
+  },
+  dropdownScroll: {
+    maxHeight: 200,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: "#333",
+  },
+  dropdownItemTextDisabled: {
+    fontSize: 15,
+    color: "#999",
+    fontStyle: "italic",
+  },
+  pinSelector: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: "#fff",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  pinPlaceholder: {
+    color: "#999",
+    fontSize: 15,
+  },
+  selectedPin: {
+    color: "#333",
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  pinDropdown: {
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    marginBottom: 12,
+    maxHeight: 200,
+  },
+  pinOption: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
+  pinOptionText: {
+    fontSize: 15,
+    color: "#333",
+  },
+  pinOptionTextDisabled: {
+    fontSize: 15,
+    color: "#999",
+    fontStyle: "italic",
   },
   addButton: {
     backgroundColor: "#007BFF",
-    borderRadius: 5,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     alignItems: "center",
   },
   addButtonText: {
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 15,
+    fontWeight: "600",
   },
-  // Estilos para los items de la lista
+  disabledButton: {
+    backgroundColor: "#cccccc",
+  },
   deviceItem: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 15,
-    backgroundColor: "#e6e6e6",
-    borderRadius: 5,
-    marginVertical: 8,
+    justifyContent: "space-between",
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  optionsButton: {
+  deviceInfo: {
+    flex: 1,
+  },
+  deviceName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 4,
+  },
+  devicePin: {
+    fontSize: 14,
+    color: "#666",
+  },
+  deviceActions: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  actionButton: {
     width: 40,
     height: 40,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#ccc",
     borderRadius: 20,
-    marginRight: 10,
+    marginLeft: 8,
   },
-  optionsButtonText: {
-    fontSize: 20,
-    color: "#333",
+  powerButtonOn: {
+    backgroundColor: "#4CAF50",
   },
-  deviceButton: {
-    flex: 1,
+  powerButtonOff: {
+    backgroundColor: "#F44336",
+  },
+  programButton: {
+    backgroundColor: "#007BFF",
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: "center",
     justifyContent: "center",
-    alignItems: "flex-start",
-  },
-  deviceText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
   },
   emptyText: {
     textAlign: "center",
     fontSize: 16,
     color: "#888",
-    marginTop: 20,
   },
-  // Estilos para el modal
+  editButton: {
+    backgroundColor: "#FF9800",
+  },
   modalBackground: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  modalContent: {
-    width: "100%",
-    paddingVertical: 10,
-    alignItems: "center",
-  },
   modalContainer: {
-    width: "80%",
-    backgroundColor: "#FFE5B4",
-    borderRadius: 10,
+    width: "85%",
+    backgroundColor: "#fff",
+    borderRadius: 12,
     padding: 20,
-    alignItems: "center",
     shadowColor: "#000",
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 5,
   },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
+  },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 20,
+    color: "#333",
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 15,
+    backgroundColor: "#f0f0f0",
+  },
+  closeButtonText: {
+    fontSize: 16,
+    color: "#555",
+  },
+  modalContent: {
+    width: "100%",
+    paddingVertical: 10,
   },
   modalLabel: {
-    alignSelf: "flex-start",
     fontSize: 16,
-    marginTop: 10,
+    fontWeight: "500",
+    marginBottom: 8,
+    color: "#333",
   },
   modalInput: {
     width: "100%",
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 5,
-    padding: 10,
-    marginVertical: 5,
-    backgroundColor: "#f5f5f5",
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: "#f9f9f9",
   },
   modalOptionsContainer: {
     width: "100%",
-    marginVertical: 10,
-    alignItems: "center",
   },
   modalOptionButton: {
-    width: "100%",
-    padding: 15,
-    backgroundColor: "#f0f0f0",
-    borderRadius: 10,
-    marginVertical: 5,
+    flexDirection: "row",
     alignItems: "center",
+    padding: 14,
+    backgroundColor: "#f9f9f9",
+    borderRadius: 8,
+    marginBottom: 8,
   },
-  modalOptionButtonClose: {
-    width: "100%",
-    padding: 15,
-    backgroundColor: "#cccccc",
-    borderRadius: 10,
-    marginVertical: 5,
-    alignItems: "center",
+  optionIcon: {
+    marginRight: 12,
   },
   modalOptionText: {
     fontSize: 16,
-    fontWeight: "bold",
-  },
-  secondaryButton: {
-    backgroundColor: "#007BFF",
-    width: "100%",
-    height: 35,
-    marginBottom: 10,
-    borderRadius: 5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  secondaryButtonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  secondaryButton2: {
-    backgroundColor: "red",
-    width: "100%",
-    height: 35,
-    marginBottom: 10,
-    borderRadius: 5,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  settingsContainer: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-  },
-  backButton: {
-    position: "absolute",
-    bottom: 20,
-    left: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: "#ddd",
-    borderRadius: 5,
-  },
-  backButtonText: {
-    fontSize: 18,
+    fontWeight: "500",
     color: "#333",
   },
-});
+  actionButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  updateButton: {
+    backgroundColor: "#007BFF",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 20,
+    alignItems: "center",
+  },
+  updateButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },  
+  deleteButton: {
+    backgroundColor: "red",
+    width: "100%",
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  deviceButton: {
+    flex: 1,
+    padding: 16,
+  },
+})
+
+export default ListSubDevices
+
