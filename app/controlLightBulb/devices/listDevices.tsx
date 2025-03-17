@@ -437,9 +437,6 @@ const ListUserDevices: React.FC = () => {
     })
   }
 
-  // Modificar la función renderItem para mover el indicador de conexión después del tipo de Photon
-  // y eliminar el círculo pulsante, dejando solo el icono de WiFi
-
   const renderItem = ({ item }: { item: any }) => {
     const isConnected = deviceConnections[item.key] || false
     const deviceType = deviceTypes[item.key] || "Desconocido"
@@ -482,8 +479,7 @@ const ListUserDevices: React.FC = () => {
     )
   }
 
-  // Agregar un botón de actualización en la parte superior de la lista
-  // Modificar el return para incluir el botón de actualización
+  // He (o E) Agregao' un botón de actualizao
 
   return (
     <View style={styles.container}>
