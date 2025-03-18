@@ -167,6 +167,7 @@ const LoginScreen = () => {
 const { width, height } = Dimensions.get("window")
 const scale = Math.min(width, height) / 375 // Base scale on a 375pt width (iPhone standard)
 // Función para hacer responsive los tamaños de texto basado en el ancho de la pantalla
+// aqui esta el coso para hacer lo demas responsive /// pendiente <-- revisa esta vaina que ta to wena
 const normalizeFont = (size: number) => {
   return Math.round(size * scale)
 }

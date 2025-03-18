@@ -455,9 +455,9 @@ const ListSubDevices: React.FC = () => {
                   size={20}
                   style={{
                     position: 'absolute',
-                    right: 15, 
-                    top: '40%', 
-                    transform: [{ translateY: 5 }], 
+                    right: 15,
+                    top: '40%',
+                    transform: [{ translateY: 5 }],
                   }}
                 />
               )}
@@ -492,9 +492,16 @@ const ListSubDevices: React.FC = () => {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Gestión del Subdispositivo</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+              <TouchableOpacity
+                onPress={() => {
+                  setActiveOption(""); // Reinicia la opción activa
+                  setModalVisible(false);
+                }}
+                style={styles.closeButton}
+              >
                 <Text style={styles.closeButtonText}>✕</Text>
               </TouchableOpacity>
+
             </View>
 
             {activeOption === "updateName" ? (
@@ -512,9 +519,10 @@ const ListSubDevices: React.FC = () => {
                   value={updatedName}
                   onChangeText={setUpdatedName}
                 />
-                <TouchableOpacity style={styles.actionButton} onPress={updateSubdeviceName}>
-                  <Text style={styles.actionButtonText}>Actualizar nombre</Text>
+                <TouchableOpacity style={styles.updateButton} onPress={updateSubdeviceName}>
+                  <Text style={styles.updateButtonText}>Actualizar nombre</Text>
                 </TouchableOpacity>
+
               </View>
             ) : activeOption === "delete" ? (
               <View style={styles.modalContent}>
@@ -814,6 +822,19 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   actionButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  updateButton: {
+    backgroundColor: "#007BFF",
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 20,
+    alignItems: "center",
+  },
+  updateButtonText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",

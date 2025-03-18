@@ -105,7 +105,7 @@ const HomeScreen = () => {
     </View>
   )
 }
-
+// deberia de poner algo para que sea responsive aqui? /// pendiente
 const styles = StyleSheet.create({
   container: {
     flex: 1,

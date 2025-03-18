@@ -15,7 +15,7 @@ const Navbar = ({ title, showBackButton = true, showSettingsButton = true, onSet
   const router = useRouter()
   const pathname = usePathname()
 
-  // No mostrar el botón de regreso si la vista es accesible desde la barra de navegación inferior
+  // No mostrar el botón de regreso si una main viwe
   const shouldShowBackButton =
     showBackButton &&
     ![

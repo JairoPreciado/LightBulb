@@ -80,7 +80,7 @@ const RegisterStep2 = () => {
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.container}>
             {/* Titulo de la vista */}
-            <Text style={styles.title}>Crear Cuenta</Text>
+            <Text style={styles.title}>Registro: Paso 2</Text>
             <Text style={styles.subtitle}>Completa tu información personal</Text>
 
             {/* Email verificado */}
