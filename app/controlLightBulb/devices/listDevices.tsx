@@ -2,12 +2,23 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput } from "react-native"
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  Modal,
+  TextInput,
+  Image,
+  ActivityIndicator,
+} from "react-native"
 import Checkbox from "expo-checkbox"
 import { useRouter } from "expo-router"
 import { auth, db } from "../../../firebaseConfiguration"
 import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore"
-import { ChevronRight, Edit, Trash2, Zap } from "lucide-react-native"
+import { ChevronRight, Edit, Trash2, Zap, Wifi, WifiOff, RefreshCw } from "lucide-react-native"
 import Navbar from "../../components/navbar"
 import BottomNavbar from "../../components/bottom-navbar"
 import SettingsModal from "../settings-modal"
@@ -38,6 +49,10 @@ const ListUserDevices: React.FC = () => {
   const [updatedPhotonId, setUpdatedPhotonId] = useState("")
   // Estado para almacenar los tipos de dispositivos
   const [deviceTypes, setDeviceTypes] = useState<{ [key: string]: string }>({})
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  // Estado para almacenar el estado de conexión de los dispositivos
+  const [deviceConnections, setDeviceConnections] = useState<{ [key: string]: boolean }>({})
+
   const router = useRouter()
 
   useEffect(() => {
@@ -63,15 +78,21 @@ const ListUserDevices: React.FC = () => {
           }))
           setDevices(devicesArray)
 
-          // Obtener el tipo de cada dispositivo
+          // Obtener el tipo y estado de conexión de cada dispositivo
           const types: { [key: string]: string } = {}
+          const connections: { [key: string]: boolean } = {}
+
           for (const device of devicesArray) {
             if (device.photonId && device.apikey) {
-              const type = await fetchDeviceType(device.photonId, device.apikey)
-              types[device.key] = type
+              // Obtener tipo de dispositivo
+              const deviceInfo = await fetchDeviceInfo(device.photonId, device.apikey)
+              types[device.key] = deviceInfo.type
+              connections[device.key] = deviceInfo.connected
             }
           }
+
           setDeviceTypes(types)
+          setDeviceConnections(connections)
         } else {
           Alert.alert("Error", "No se encontró información del usuario.")
         }
@@ -80,11 +101,50 @@ const ListUserDevices: React.FC = () => {
         Alert.alert("Error", "No se pudieron cargar los dispositivos.")
       }
     }
+
     loadDevices()
+
+    // Configurar intervalo para verificar conexión periódicamente
+    const connectionInterval = setInterval(() => {
+      checkDeviceConnections()
+    }, 30000) // Verificar cada 30 segundos
+
+    return () => clearInterval(connectionInterval)
   }, [])
 
-  // Función para obtener el tipo de dispositivo desde la API de Particle
-  const fetchDeviceType = async (photonId: string, apiKey: string) => {
+  // Modificar la función checkDeviceConnections para mostrar un indicador de carga
+  const checkDeviceConnections = async () => {
+    setIsRefreshing(true)
+    const connections: { [key: string]: boolean } = {}
+
+    for (const device of devices) {
+      if (device.photonId && device.apikey) {
+        try {
+          const response = await fetch(`https://api.particle.io/v1/devices/${device.photonId}`, {
+            headers: {
+              Authorization: `Bearer ${device.apikey}`,
+            },
+          })
+
+          if (response.ok) {
+            const data = await response.json()
+            connections[device.key] = data.connected || false
+          } else {
+            connections[device.key] = false
+          }
+        } catch (error) {
+          console.error("Error al verificar conexión:", error)
+          connections[device.key] = false
+        }
+      }
+    }
+
+    setDeviceConnections(connections)
+    setIsRefreshing(false)
+  }
+
+  // Función para obtener información del dispositivo desde la API de Particle
+  const fetchDeviceInfo = async (photonId: string, apiKey: string) => {
     try {
       const response = await fetch(`https://api.particle.io/v1/devices/${photonId}`, {
         headers: {
@@ -94,13 +154,12 @@ const ListUserDevices: React.FC = () => {
 
       if (response.ok) {
         const data = await response.json()
-        // El tipo de dispositivo está en data.product_id o data.platform_id
-        // 6 = Photon, 10 = Electron, 12 = Argon, 13 = Boron, 26 = Photon 2
+        // Determinar el tipo de dispositivo y estado de conexión
         let deviceType = "Desconocido"
 
         if (data.platform_id === 6) {
           deviceType = "Photon"
-        } else if (data.platform_id === 26) {
+        } else if (data.platform_id === 32 || data.platform_id === 26) {
           deviceType = "Photon 2"
         } else if (data.platform_id === 10) {
           deviceType = "Electron"
@@ -110,12 +169,39 @@ const ListUserDevices: React.FC = () => {
           deviceType = "Boron"
         }
 
-        return deviceType
+        return {
+          type: deviceType,
+          connected: data.connected || false,
+        }
       }
-      return "Desconocido"
+      return {
+        type: "Desconocido",
+        connected: false,
+      }
     } catch (error) {
-      console.error("Error al obtener tipo de dispositivo:", error)
-      return "Desconocido"
+      console.error("Error al obtener información del dispositivo:", error)
+      return {
+        type: "Desconocido",
+        connected: false,
+      }
+    }
+  }
+
+  // Función para obtener la ruta de la imagen según el tipo de dispositivo
+  const getDeviceImageSource = (deviceType: string) => {
+    switch (deviceType) {
+      case "Photon":
+        return require("../../../assets/images/device_type/photon0.png")
+      case "Photon 2":
+        return require("../../../assets/images/device_type/photon2.png")
+      case "Electron":
+        return require("../../../assets/images/device_type/electron.png")
+      case "Argon":
+        return require("../../../assets/images/device_type/argon.png")
+      case "Boron":
+        return require("../../../assets/images/device_type/boron.png")
+      default:
+        return null
     }
   }
 
@@ -351,31 +437,49 @@ const ListUserDevices: React.FC = () => {
     })
   }
 
-  const renderItem = ({ item }: { item: any }) => (
-    <View style={styles.deviceItem}>
-      <TouchableOpacity style={styles.deviceButton} onPress={() => handleSelectDevice(item.key)}>
-        <View style={styles.deviceInfo}>
-          <Text style={styles.deviceName}>{item.name}</Text>
-          <Text style={styles.deviceId}>ID: {item.photonId}</Text>
-          <Text style={styles.deviceType}>Tipo: {deviceTypes[item.key] || "Cargando..."}</Text>
-        </View>
-        <ChevronRight color="#777" size={20} />
-      </TouchableOpacity>
+  const renderItem = ({ item }: { item: any }) => {
+    const isConnected = deviceConnections[item.key] || false
+    const deviceType = deviceTypes[item.key] || "Desconocido"
+    const deviceImage = getDeviceImageSource(deviceType)
 
-      <View style={styles.deviceActions}>
-        <TouchableOpacity style={styles.optionsButton} onPress={() => openDeviceManagementModal(item)}>
-          <Text style={styles.optionsButtonText}>⋮</Text>
+    return (
+      <View style={styles.deviceItem}>
+        <TouchableOpacity style={styles.deviceButton} onPress={() => handleSelectDevice(item.key)}>
+          <View style={styles.deviceInfo}>
+            <Text style={styles.deviceName}>{item.name}</Text>
+            <Text style={styles.deviceId}>ID: {item.photonId}</Text>
+            <View style={styles.deviceTypeContainer}>
+              {deviceImage && <Image source={deviceImage} style={styles.deviceTypeImage} resizeMode="contain" />}
+              <Text style={styles.deviceType}>Tipo: {deviceType}</Text>
+              <View style={styles.connectionStatusContainer}>
+                {isConnected ? (
+                  <Wifi color="#4CAF50" size={16} style={styles.connectionIcon} />
+                ) : (
+                  <WifiOff color="#F44336" size={16} style={styles.connectionIcon} />
+                )}
+              </View>
+            </View>
+          </View>
+          <ChevronRight color="#777" size={20} />
         </TouchableOpacity>
 
-        <Checkbox
-          value={selectedDevices.includes(item.key)}
-          onValueChange={() => toggleSelection(item.key)}
-          style={styles.checkbox}
-          color={selectedDevices.includes(item.key) ? "#007BFF" : undefined}
-        />
+        <View style={styles.deviceActions}>
+          <TouchableOpacity style={styles.optionsButton} onPress={() => openDeviceManagementModal(item)}>
+            <Text style={styles.optionsButtonText}>⋮</Text>
+          </TouchableOpacity>
+
+          <Checkbox
+            value={selectedDevices.includes(item.key)}
+            onValueChange={() => toggleSelection(item.key)}
+            style={styles.checkbox}
+            color={selectedDevices.includes(item.key) ? "#007BFF" : undefined}
+          />
+        </View>
       </View>
-    </View>
-  )
+    )
+  }
+
+  // He (o E) Agregao' un botón de actualizao
 
   return (
     <View style={styles.container}>
@@ -384,6 +488,15 @@ const ListUserDevices: React.FC = () => {
       <SettingsModal isVisible={settingsModalVisible} onClose={() => setSettingsModalVisible(false)} />
 
       <View style={styles.content}>
+        <TouchableOpacity style={styles.refreshButton} onPress={checkDeviceConnections} disabled={isRefreshing}>
+          {isRefreshing ? (
+            <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
+          ) : (
+            <RefreshCw color="#FFFFFF" size={16} style={{ marginRight: 8 }} />
+          )}
+          <Text style={styles.refreshButtonText}>{isRefreshing ? "Actualizando..." : "Actualizar conexiones"}</Text>
+        </TouchableOpacity>
+
         <FlatList
           data={devices}
           keyExtractor={(item) => item.key}
@@ -462,16 +575,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
     color: "#333",
-    marginBottom: 4,
+    flex: 1,
   },
   deviceId: {
     fontSize: 14,
     color: "#666",
   },
+  deviceTypeContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 4,
+  },
+  deviceTypeImage: {
+    width: 40,
+    height: 20,
+    marginRight: 8,
+  },
   deviceType: {
     fontSize: 14,
     color: "#888",
-    marginTop: 2,
+    marginRight: 8,
+  },
+  connectionStatusContainer: {
+    marginLeft: 4,
+  },
+  connectionIcon: {
+    marginLeft: 2,
   },
   deviceActions: {
     flexDirection: "row",
@@ -632,6 +761,26 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: "#fff",
     fontSize: 16,
+    fontWeight: "600",
+  },
+  refreshButton: {
+    backgroundColor: "#007BFF",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  refreshButtonText: {
+    color: "#fff",
+    fontSize: 14,
     fontWeight: "600",
   },
 })

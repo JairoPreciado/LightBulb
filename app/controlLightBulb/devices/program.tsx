@@ -152,7 +152,7 @@ const Programar: React.FC = () => {
       await saveSchedulesToSubdeviceAndParticle(firebaseSchedules)
     }
   }
-
+// esto falla porque usar un photon 2, o por que le da la gana? //// pendiente
   const validateInput = (value: string, max: number): string => {
     const numericValue = value.replace(/[^0-9]/g, "")
     if (!numericValue) return ""

@@ -2,20 +2,17 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, Modal, ScrollView } from "react-native"
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, TextInput, Alert, Modal, Image } from "react-native"
 import { useRouter, useLocalSearchParams } from "expo-router"
 import { auth, db } from "../../../firebaseConfiguration"
 import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore"
 import { ChevronDown, Power, Clock, Edit, Trash2 } from "lucide-react-native"
 import Navbar from "../../components/navbar"
 import SettingsModal from "../settings-modal"
-import RNPickerSelect from 'react-native-picker-select';
-
+import RNPickerSelect from "react-native-picker-select"
 
 const VALID_PINS = ["D0", "D1", "D2", "D3", "D4", "D5", "D6", "D7"]
 const MAX_SUBDEVICES = 10
-
-
 
 const ListSubDevices: React.FC = () => {
   const { deviceKey } = useLocalSearchParams<{ deviceKey: string }>()
@@ -29,6 +26,11 @@ const ListSubDevices: React.FC = () => {
   const [newSubName, setNewSubName] = useState("")
   const [selectedPin, setSelectedPin] = useState("")
   const [deviceStates, setDeviceStates] = useState<{ [key: string]: boolean }>({})
+  const [deviceInfo, setDeviceInfo] = useState<{
+    name: string
+    photonId: string
+    type: string
+  } | null>(null)
   const router = useRouter()
 
   // Obtener los pines disponibles
@@ -37,14 +39,27 @@ const ListSubDevices: React.FC = () => {
     return VALID_PINS.filter((pin) => !usedPins.includes(pin))
   }
 
-  const availablePinsItems = getAvailablePins().map(pin => ({
-    label: pin,
-    value: pin,
-  }));
+  // Función para obtener la ruta de la imagen según el tipo de dispositivo
+  const getDeviceImageSource = (deviceType: string) => {
+    switch (deviceType) {
+      case "Photon":
+        return require("../../../assets/images/device_type/photon0.png")
+      case "Photon 2":
+        return require("../../../assets/images/device_type/photon2.png")
+      case "Electron":
+        return require("../../../assets/images/device_type/electron.png")
+      case "Argon":
+        return require("../../../assets/images/device_type/argon.png")
+      case "Boron":
+        return require("../../../assets/images/device_type/boron.png")
+      default:
+        return require("../../../assets/images/device_type/photon0.png") // Imagen por defecto
+    }
+  }
 
-  // Cargar subdispositivos y sus estados
+  // Cargar información del dispositivo y subdispositivos
   useEffect(() => {
-    const loadSubdevices = async () => {
+    const loadDeviceInfo = async () => {
       if (!deviceKey) {
         Alert.alert("Error", "No se especificó el dispositivo.")
         return
@@ -59,6 +74,46 @@ const ListSubDevices: React.FC = () => {
         const snap = await getDoc(userDocRef)
         if (snap.exists()) {
           const data = snap.data()
+          const deviceData = data.Devices?.[deviceKey]
+
+          if (deviceData) {
+            // Determinar el tipo de dispositivo basado en el platform_id
+            let deviceType = "Photon" // Valor por defecto
+
+            // Si tienes acceso a la API de Particle, podrías obtener el tipo real
+            if (deviceData.photonId && deviceData.apikey) {
+              try {
+                const response = await fetch(`https://api.particle.io/v1/devices/${deviceData.photonId}`, {
+                  headers: { Authorization: `Bearer ${deviceData.apikey}` },
+                })
+
+                if (response.ok) {
+                  const deviceInfo = await response.json()
+                  if (deviceInfo.platform_id === 6) {
+                    deviceType = "Photon"
+                  } else if (deviceInfo.platform_id === 32 || deviceInfo.platform_id === 26) {
+                    deviceType = "Photon 2"
+                  } else if (deviceInfo.platform_id === 10) {
+                    deviceType = "Electron"
+                  } else if (deviceInfo.platform_id === 12) {
+                    deviceType = "Argon"
+                  } else if (deviceInfo.platform_id === 13) {
+                    deviceType = "Boron"
+                  }
+                }
+              } catch (error) {
+                console.error("Error al obtener información del dispositivo:", error)
+              }
+            }
+
+            setDeviceInfo({
+              name: deviceData.name || "Dispositivo",
+              photonId: deviceData.photonId || "",
+              type: deviceType,
+            })
+          }
+
+          // Cargar subdispositivos
           const subObj = data.Devices?.[deviceKey]?.subdevices || {}
           const loaded = Object.entries(subObj).map(([pin, sub]: [string, any]) => ({
             name: sub.name,
@@ -75,11 +130,12 @@ const ListSubDevices: React.FC = () => {
           setDeviceStates(states)
         }
       } catch (error) {
-        console.error("Error al cargar subdispositivos:", error)
-        Alert.alert("Error", "No se pudieron cargar los subdispositivos.")
+        console.error("Error al cargar información del dispositivo:", error)
+        Alert.alert("Error", "No se pudo cargar la información del dispositivo.")
       }
     }
-    loadSubdevices()
+
+    loadDeviceInfo()
   }, [deviceKey])
 
   // Consultar el estado de los dispositivos periódicamente
@@ -341,17 +397,15 @@ const ListSubDevices: React.FC = () => {
         </TouchableOpacity>
 
         <TouchableOpacity
-  style={[styles.actionButton, styles.editButton]}
-  onPress={() => {
-    setSelectedSubdevice(item);
-    setUpdatedName("");
-    setActiveOption(""); // Aseguramos que se muestre el menú principal
-    setModalVisible(true);
-  }}
->
-  <Edit size={20} color="#fff" />
-</TouchableOpacity>
-
+          style={[styles.actionButton, styles.editButton]}
+          onPress={() => {
+            setSelectedSubdevice(item)
+            setUpdatedName("")
+            setModalVisible(true)
+          }}
+        >
+          <Edit size={20} color="#fff" />
+        </TouchableOpacity>
       </View>
     </View>
   )
@@ -363,6 +417,18 @@ const ListSubDevices: React.FC = () => {
       <SettingsModal isVisible={settingsModalVisible} onClose={() => setSettingsModalVisible(false)} />
 
       <View style={styles.content}>
+        {/* Información del dispositivo principal */}
+        {deviceInfo && (
+          <View style={styles.deviceInfoContainer}>
+            <Text style={styles.deviceInfoName}>{deviceInfo.name}</Text>
+            <Image source={getDeviceImageSource(deviceInfo.type)} style={styles.deviceImage} resizeMode="contain" />
+            <View style={styles.deviceInfoText}>
+              <Text style={styles.deviceInfoId}>ID: {deviceInfo.photonId}</Text>
+              <Text style={styles.deviceInfoType}>Tipo: {deviceInfo.type}</Text>
+            </View>
+          </View>
+        )}
+
         {/* Formulario para agregar subdispositivos */}
         <View style={styles.formContainer}>
           <Text style={styles.formTitle}>Agregar nuevo subdispositivo</Text>
@@ -389,16 +455,15 @@ const ListSubDevices: React.FC = () => {
                   size={20}
                   style={{
                     position: 'absolute',
-                    right: 15, 
-                    top: '40%', 
-                    transform: [{ translateY: 5 }], 
+                    right: 15,
+                    top: '40%',
+                    transform: [{ translateY: 5 }],
                   }}
                 />
               )}
             />
 
           </View>
-
 
           <TouchableOpacity
             style={[styles.addButton, (!newSubName || !selectedPin) && styles.disabledButton]}
@@ -428,14 +493,14 @@ const ListSubDevices: React.FC = () => {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Gestión del Subdispositivo</Text>
               <TouchableOpacity
-  onPress={() => {
-    setActiveOption(""); // Reinicia la opción activa
-    setModalVisible(false);
-  }}
-  style={styles.closeButton}
->
-  <Text style={styles.closeButtonText}>✕</Text>
-</TouchableOpacity>
+                onPress={() => {
+                  setActiveOption(""); // Reinicia la opción activa
+                  setModalVisible(false);
+                }}
+                style={styles.closeButton}
+              >
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
 
             </View>
 
@@ -454,9 +519,9 @@ const ListSubDevices: React.FC = () => {
                   value={updatedName}
                   onChangeText={setUpdatedName}
                 />
-<TouchableOpacity style={styles.updateButton} onPress={updateSubdeviceName}>
-  <Text style={styles.updateButtonText}>Actualizar nombre</Text>
-</TouchableOpacity>
+                <TouchableOpacity style={styles.updateButton} onPress={updateSubdeviceName}>
+                  <Text style={styles.updateButtonText}>Actualizar nombre</Text>
+                </TouchableOpacity>
 
               </View>
             ) : activeOption === "delete" ? (
@@ -509,9 +574,6 @@ const pickerSelectStyles = StyleSheet.create({
   },
 });
 
-
-
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -520,6 +582,43 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     padding: 16,
+  },
+  deviceInfoContainer: {
+    alignItems: "center",
+    backgroundColor: "#ffffff",
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  deviceImage: {
+    width: 210,
+    height: 90,
+    marginVertical: 0,
+  },
+  deviceInfoText: {
+    width: "100%",
+    alignItems: "center",
+  },
+  deviceInfoName: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  deviceInfoId: {
+    fontSize: 14,
+    color: "#666",
+    marginBottom: 2,
+  },
+  deviceInfoType: {
+    fontSize: 14,
+    color: "#888",
   },
   formContainer: {
     backgroundColor: "#ffffff",
@@ -552,100 +651,18 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     zIndex: 1,
   },
-  selectButton: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+  pickerInput: {
     borderWidth: 1,
     borderColor: "#ddd",
     borderRadius: 8,
     padding: 12,
     backgroundColor: "#fff",
-  },
-  selectedValue: {
-    color: "#333",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  placeholderValue: {
-    color: "#999",
-    fontSize: 15,
-  },
-  dropdown: {
-    position: "absolute",
-    top: "100%",
-    left: 0,
-    right: 0,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    marginTop: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    zIndex: 2,
-  },
-  dropdownScroll: {
-    maxHeight: 200,
-  },
-  dropdownItem: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  dropdownItemText: {
     fontSize: 15,
     color: "#333",
   },
-  dropdownItemTextDisabled: {
-    fontSize: 15,
-    color: "#999",
-    fontStyle: "italic",
-  },
-  pinSelector: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-    backgroundColor: "#fff",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  pinPlaceholder: {
+  pickerPlaceholder: {
     color: "#999",
     fontSize: 15,
-  },
-  selectedPin: {
-    color: "#333",
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  pinDropdown: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    marginBottom: 12,
-    maxHeight: 200,
-  },
-  pinOption: {
-    padding: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f0f0f0",
-  },
-  pinOptionText: {
-    fontSize: 15,
-    color: "#333",
-  },
-  pinOptionTextDisabled: {
-    fontSize: 15,
-    color: "#999",
-    fontStyle: "italic",
   },
   addButton: {
     backgroundColor: "#007BFF",
@@ -678,6 +695,7 @@ const styles = StyleSheet.create({
   },
   deviceInfo: {
     flex: 1,
+    padding: 16,
   },
   deviceName: {
     fontSize: 16,
@@ -820,7 +838,7 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     fontWeight: "600",
-  },  
+  },
   deleteButton: {
     backgroundColor: "red",
     width: "100%",

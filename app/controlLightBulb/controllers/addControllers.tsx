@@ -233,7 +233,7 @@ const AddDevice = () => {
     </View>
   )
 }
-
+/// revisar si esto es responsive ///// pendiente <--- se ve joya, deberia de probar con otras medidas para ver si se ve bien
 const styles = StyleSheet.create({
   container: {
     flex: 1,

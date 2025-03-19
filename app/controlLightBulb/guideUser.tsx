@@ -14,7 +14,7 @@ const UserGuide = () => {
   const handleSettingsPress = () => {
     setModalVisible(true)
   }
-
+// deberias de actualizar esta vista ///// pendiente
   return (
     <View style={styles.container}>
       <Navbar title="Guía de Usuario" onSettingsPress={handleSettingsPress} />

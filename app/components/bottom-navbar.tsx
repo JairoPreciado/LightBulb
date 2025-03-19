@@ -1,7 +1,5 @@
 "use client"
 
-// Modificar el componente BottomNavbar para verificar dispositivos Photon conectados
-// Importar los hooks y componentes necesarios
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, ActivityIndicator, Modal, Alert } from "react-native"
 import { useRouter, usePathname } from "expo-router"
 import { Smartphone, BookOpen, Sliders, Home, Lock, Plus } from "lucide-react-native"
