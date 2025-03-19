@@ -1,13 +1,12 @@
-"use client"
-
-import { useEffect, useState } from "react"
-import { View, Text, StyleSheet, Alert, ScrollView } from "react-native"
+import { useEffect, useState, useCallback } from "react"
+import { View, Text, StyleSheet, Alert, ScrollView, BackHandler } from "react-native"
 import { useRouter } from "expo-router"
 import { auth, db } from "../../firebaseConfiguration"
 import { doc, getDoc, updateDoc } from "firebase/firestore"
 import Navbar from "../components/navbar"
 import BottomNavbar from "../components/bottom-navbar"
 import SettingsModal from "./settings-modal"
+import { useFocusEffect } from "@react-navigation/native"
 
 const HomeScreen = () => {
   const router = useRouter()
@@ -32,10 +31,8 @@ const HomeScreen = () => {
           let validExpiresAt: number | string | null = null
           let validDeviceKey = ""
 
-          // Iterar sobre cada dispositivo guardado en Devices
           Object.entries(devicesData).forEach(([key, device]: [string, any]) => {
             if (device && device.apikey && device.apikey.trim() !== "") {
-              // Tomamos el primer dispositivo con API key no vacía
               if (!validApiKey) {
                 validApiKey = device.apikey
                 validExpiresAt = device.expiresAt
@@ -48,7 +45,6 @@ const HomeScreen = () => {
           setStoredExpiresAt(validExpiresAt)
           setDeviceKey(validDeviceKey)
 
-          // Si la API key tiene fecha de expiración (número) y ya pasó, se actualiza para eliminarla
           if (typeof validExpiresAt === "number" && Date.now() > validExpiresAt) {
             await updateDoc(userDocRef, { [`Devices.${validDeviceKey}.apikey`]: "" })
             setStoredApiKey("")
@@ -64,24 +60,41 @@ const HomeScreen = () => {
     return () => clearInterval(intervalId)
   }, [])
 
+  // Manejo del botón "Atrás" en Android
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        if (!modalVisible) {
+          Alert.alert("Aviso", "Selecciona 'Cerrar sesión' para salir.", [
+            {
+              text: "OK",
+              onPress: () => setModalVisible(true), // Abre el modal después de la alerta
+            },
+          ])
+          return true // Bloquea la navegación hasta que el usuario interactúe
+        }
+        return false // Permite la navegación normal si el modal ya está abierto
+      }
+  
+      const backHandler = BackHandler.addEventListener("hardwareBackPress", onBackPress)
+  
+      return () => backHandler.remove()
+    }, [modalVisible])
+  )
+  
+
   const handleSettingsPress = () => {
     setModalVisible(true)
   }
 
   return (
     <View style={styles.container}>
-      {/* Navbar en la parte superior */}
       <Navbar title="Lightbulb" showBackButton={false} onSettingsPress={handleSettingsPress} />
-
-      {/* Settings Modal */}
       <SettingsModal isVisible={modalVisible} onClose={() => setModalVisible(false)} />
-
       <ScrollView style={styles.contentContainer}>
-        {/* Texto de bienvenida */}
         <Text style={styles.text}>Bienvenido a Lightbulb</Text>
         <Text style={styles.subText}>Gestiona toda la información de la app y configura tus dispositivos.</Text>
 
-        {/* Tarjetas informativas */}
         <View style={styles.infoContainer}>
           <View style={styles.card}>
             <Text style={styles.cardTitle}>📡 Dispositivos</Text>
@@ -99,13 +112,11 @@ const HomeScreen = () => {
           </View>
         </View>
       </ScrollView>
-
-      {/* Barra de navegación inferior */}
       <BottomNavbar storedApiKey={storedApiKey} />
     </View>
   )
 }
-// deberia de poner algo para que sea responsive aqui? /// pendiente
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -156,4 +167,3 @@ const styles = StyleSheet.create({
 })
 
 export default HomeScreen
-

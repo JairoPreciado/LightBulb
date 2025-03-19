@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { View, Text, TextInput, StyleSheet, Alert, Modal, TouchableOpacity, Dimensions } from "react-native"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import Checkbox from "expo-checkbox"
 import { useRouter } from "expo-router"
 import { auth, db } from "../../firebaseConfiguration"
@@ -62,7 +63,10 @@ const SettingsModal = ({ isVisible, onClose }: SettingsModalProps) => {
   }
 
   // Funcion para cerrar sesion
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // 🔹 Eliminar credenciales guardadas
+    await AsyncStorage.removeItem("userEmail")
+    await AsyncStorage.removeItem("userPassword")
     auth.signOut()
     Alert.alert("Cierre de Sesión", "Sesión cerrada correctamente.")
     router.replace("/loginn/login")
