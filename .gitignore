@@ -11,7 +11,7 @@ npm-debug.*
 web-build/
 
 #archivo de contraseñas, no hay necesidad de montarlo en github xd
-firebaseConfiguration.js
+firebaseConfigurations.js
 
 # macOS
 .DS_Store
