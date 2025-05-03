@@ -645,7 +645,7 @@ const ListUserDevices: React.FC = () => {
               </Text>
               <TouchableOpacity
                 style={styles.addDeviceButton}
-                onPress={() => router.push("./addControllers")}
+                onPress={() => router.push("../controllers/addControllers")}
               >
                 <Text style={styles.addDeviceButtonText}>
                   Agregar Dispositivo
