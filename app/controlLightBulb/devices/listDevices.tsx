@@ -504,7 +504,7 @@ const ListUserDevices: React.FC = () => {
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No hay dispositivos creados aún.</Text>
-              <TouchableOpacity style={styles.addDeviceButton} onPress={() => router.push("./addControllers")}>
+              <TouchableOpacity style={styles.addDeviceButton} onPress={() => router.push("../controllers/addControllers")}>
                 <Text style={styles.addDeviceButtonText}>Agregar Dispositivo</Text>
               </TouchableOpacity>
             </View>
