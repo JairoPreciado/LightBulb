@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, ScrollView } from "react-native"
+import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, ScrollView, Linking  } from "react-native"
 import { auth, db } from "../../../firebaseConfiguration"
 import { doc, setDoc } from "firebase/firestore"
 import { useRouter } from "expo-router"
@@ -122,10 +122,17 @@ const AddDevice = () => {
       }
     }
   }
-  // 2. Agrega la función showInfo en tu componente
-  const showInfo = (message: string) => {
-    Alert.alert("Información", message)
+  // 2. Ajusta showInfo para recibir opcionalmente una URL y añadir un botón
+  const showInfo = (message: string, url?: string) => {
+    const buttons = url
+     ? [
+          { text: "Configurar dispositivo en pagina", onPress: () => Linking.openURL(url) },
+          { text: "OK", style: "cancel" as const }
+        ]
+      : [{ text: "OK", style: "cancel" as const }]
+    Alert.alert("Información", message, buttons)
   }
+
 
 
   return (
@@ -136,7 +143,7 @@ const AddDevice = () => {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Información del Dispositivo <TouchableOpacity onPress={() => showInfo("Recuerda que debes tener un dispositivo IoT de particle vinculado a tu cuenta de particle para agregarlo aquí.")}>
+          <Text style={styles.sectionTitle}>Información del Dispositivo <TouchableOpacity onPress={() => showInfo("Recuerda que debes tener un dispositivo IoT de particle vinculado a tu cuenta de particle para agregarlo aquí.", "https://setup.particle.io/")}>
               <Info size={15} color="#555" />
           </TouchableOpacity>
           </Text>
