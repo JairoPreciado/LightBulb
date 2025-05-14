@@ -23,7 +23,7 @@ const AddDevice = () => {
   const [modalVisible, setModalVisible] = useState(false)
 
   // Validaciones
-  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-F]+$/.test(photonId)
+  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-Fa-f]+$/.test(photonId)
   const isEmailValid = email.includes("@")
   const isPasswordValid = password.length > 0
   const isDistinctNameValid = distinctName.trim().length > 0
@@ -139,7 +139,7 @@ const AddDevice = () => {
               style={[styles.input, !isPhotonIdValid && photonId.length > 0 && styles.inputError]}
               placeholder="Ingresa el ID de 24 caracteres"
               value={photonId}
-              onChangeText={(text) => setPhotonId(text.toUpperCase())}
+              onChangeText={(text) => setPhotonId(text)}
               autoCapitalize="characters"
               maxLength={24}
             />
