@@ -14,6 +14,8 @@ import {
   ScrollView,
   StatusBar,
   ActivityIndicator,
+  Modal,
+  Linking,
 } from "react-native"
 import { useRouter } from "expo-router"
 import { collection, query, where, getDocs } from "firebase/firestore" // Firebase Firestore
@@ -27,6 +29,7 @@ const RegisterStep1 = () => {
   const [codeSent, setCodeSent] = useState(false)
   const [verificationCode, setVerificationCode] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [showModal, setShowModal] = useState(true)
 
   // Expresión regular mejorada para validar correos electrónicos
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
@@ -122,6 +125,28 @@ const RegisterStep1 = () => {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <StatusBar barStyle="dark-content" />
+
+       {/* Modal de advertencia */}
+      <Modal visible={showModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Advertencia</Text>
+            <Text style={styles.modalText}>
+              Antes de continuar con tu creación de cuenta de "ControlParticle" debes previamente crear una cuenta en el sitio oficial de Particle:
+            </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('https://login.particle.io/signup?redirect=https%3A%2F%2Fconsole.particle.io')} style={styles.modalLinkButton}>
+              <Text style={styles.modalLinkText}>Crear cuenta en Particle</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalText2}>
+              Si ya tienes una cuenta, puedes continuar con el registro.
+            </Text>
+            <TouchableOpacity onPress={() => setShowModal(false)} style={styles.modalCloseButton}>
+              <Text style={styles.modalCloseText}>Continuar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           <View style={styles.container}>
             {/* Titulo */}
@@ -341,6 +366,52 @@ const styles = StyleSheet.create({
     color: "#007BFF",
     fontSize: normalizeFont(16),
     marginLeft: 8,
+  },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: "rgba(0, 0, 0, 0.5)", 
+    justifyContent: "center", 
+    alignItems: "center" 
+  },
+  modalContent: { 
+    width: "80%", 
+    backgroundColor: "#fff",
+    borderRadius: 8, 
+    padding: 20, 
+    alignItems: "center" 
+  },
+  modalTitle: { 
+    fontSize: normalizeFont(20), 
+    fontWeight: "bold", 
+    marginBottom: 10, 
+    color: "#FF0000"
+  },
+  modalText: { 
+    fontSize: normalizeFont(14), 
+    textAlign: "justify", 
+    marginBottom: 15 
+  },
+  modalText2: { 
+    fontSize: normalizeFont(14), 
+    textAlign: "center", 
+    marginBottom: 15 
+  },
+  modalLinkButton: { 
+    marginBottom: 10 
+  },
+  modalLinkText: { 
+    color: "#007BFF", 
+    fontSize: normalizeFont(16)
+  },
+  modalCloseButton: { 
+    backgroundColor: "#007BFF", 
+    borderRadius: 6, 
+    paddingVertical: 10, 
+    paddingHorizontal: 20 
+  },
+  modalCloseText: { 
+    color: "#fff", 
+    fontSize: normalizeFont(16) 
   },
 })
 
