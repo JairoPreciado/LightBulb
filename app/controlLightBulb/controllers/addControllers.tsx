@@ -6,7 +6,7 @@ import { auth, db } from "../../../firebaseConfiguration"
 import { doc, setDoc } from "firebase/firestore"
 import { useRouter } from "expo-router"
 import Checkbox from "expo-checkbox"
-import { Key, Database } from "lucide-react-native"
+import { Key, Database, Info } from "lucide-react-native"
 import Navbar from "../../components/navbar"
 import BottomNavbar from "../../components/bottom-navbar"
 import SettingsModal from "../settings-modal"
@@ -122,6 +122,11 @@ const AddDevice = () => {
       }
     }
   }
+  // 2. Agrega la función showInfo en tu componente
+  const showInfo = (message: string) => {
+    Alert.alert("Información", message)
+  }
+
 
   return (
     <View style={styles.container}>
@@ -131,8 +136,10 @@ const AddDevice = () => {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Información del Dispositivo</Text>
-
+          <Text style={styles.sectionTitle}>Información del Dispositivo <TouchableOpacity onPress={() => showInfo("Recuerda que debes tener un dispositivo IoT de particle vinculado a tu cuenta de particle para agregarlo aquí.")}>
+              <Info size={15} color="#555" />
+          </TouchableOpacity>
+          </Text>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>ID del Photon</Text>
             <TextInput
@@ -161,8 +168,11 @@ const AddDevice = () => {
         </View>
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Credenciales de Particle</Text>
-
+          <Text style={styles.sectionTitle}>Credenciales de Particle <TouchableOpacity onPress={() => showInfo("Recuerda que necesitas una cuenta en Particle y credenciales válidas para generar tu API Key.")}>
+              <Info size={15} color="#555" />
+            </TouchableOpacity>
+          </Text>
+          
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Correo Electrónico</Text>
             <TextInput
