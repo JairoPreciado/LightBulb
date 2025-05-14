@@ -89,10 +89,10 @@ const HomeScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Navbar title="Lightbulb" showBackButton={false} onSettingsPress={handleSettingsPress} />
+      <Navbar title="Control Particle" showBackButton={false} onSettingsPress={handleSettingsPress} />
       <SettingsModal isVisible={modalVisible} onClose={() => setModalVisible(false)} />
       <ScrollView style={styles.contentContainer}>
-        <Text style={styles.text}>Bienvenido a Lightbulb</Text>
+        <Text style={styles.text}>Bienvenido a Control Particle</Text>
         <Text style={styles.subText}>Gestiona toda la información de la app y configura tus dispositivos.</Text>
 
         <View style={styles.infoContainer}>
