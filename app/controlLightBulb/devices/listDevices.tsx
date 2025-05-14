@@ -2,31 +2,12 @@
 
 import type React from "react";
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Modal,
-  TextInput,
-  Image,
-  ActivityIndicator,
-} from "react-native";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput, Image, ActivityIndicator,} from "react-native";
 import Checkbox from "expo-checkbox";
 import { useRouter } from "expo-router";
 import { auth, db } from "../../../firebaseConfiguration";
 import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
-import {
-  ChevronRight,
-  Edit,
-  Trash2,
-  Zap,
-  Wifi,
-  WifiOff,
-  RefreshCw,
-} from "lucide-react-native";
+import { ChevronRight, Edit, Trash2, Zap, Wifi, WifiOff, RefreshCw,} from "lucide-react-native";
 import Navbar from "../../components/navbar";
 import BottomNavbar from "../../components/bottom-navbar";
 import SettingsModal from "../settings-modal";
@@ -65,20 +46,32 @@ const ListUserDevices: React.FC = () => {
 
   const router = useRouter();
   const handleFlashDevice = (device: any) => {
-    const type = deviceTypes[device.key] || "Desconocido"
+    // 1) Obtén el type que ya guardaste
+    const type = deviceTypes[device.key] || "Photon";
   
+    // 2) Mapea el type a su platformId numérico
+    const platformMap: Record<string, number> = {
+      Photon: 6,
+      "Photon 2": 32,
+      Electron: 10,
+      Argon: 12,
+      Boron: 13,
+    };
+    const platformId = platformMap[type] || 6;
+  
+    // 3) Navega pasando también platformId
     router.push({
       pathname: "./flashDevice",
       params: {
         id: device.photonId,
         name: device.name,
-        type: type,
+        type,                   // sigue pasando el nombre legible
+        platformId: String(platformId), // lo convertimos a string para useLocalSearchParams
         key: device.key,
-        apikey: device.apikey, // Asegúrate de pasar el apikey aquí
+        userToken: device.apikey,
       },
-    })
-  }
-  
+    });
+  };
 
   useEffect(() => {
     const loadDevices = async () => {
