@@ -1,225 +1,263 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useEffect, useState } from "react"
-import {
-  View,
-  Text,
-  FlatList,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  Modal,
-  TextInput,
-  Image,
-  ActivityIndicator,
-} from "react-native"
-import Checkbox from "expo-checkbox"
-import { useRouter } from "expo-router"
-import { auth, db } from "../../../firebaseConfiguration"
-import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore"
-import { ChevronRight, Edit, Trash2, Zap, Wifi, WifiOff, RefreshCw } from "lucide-react-native"
-import Navbar from "../../components/navbar"
-import BottomNavbar from "../../components/bottom-navbar"
-import SettingsModal from "../settings-modal"
+import type React from "react";
+import { useEffect, useState } from "react";
+import { View, Text, FlatList, TouchableOpacity, StyleSheet, Alert, Modal, TextInput, Image, ActivityIndicator,} from "react-native";
+import Checkbox from "expo-checkbox";
+import { useRouter } from "expo-router";
+import { auth, db } from "../../../firebaseConfiguration";
+import { doc, getDoc, updateDoc, deleteField } from "firebase/firestore";
+import { ChevronRight, Edit, Trash2, Zap, Wifi, WifiOff, RefreshCw,} from "lucide-react-native";
+import Navbar from "../../components/navbar";
+import BottomNavbar from "../../components/bottom-navbar";
+import SettingsModal from "../settings-modal";
 
 const ListUserDevices: React.FC = () => {
   const [devices, setDevices] = useState<
     Array<{
-      key: string
-      photonId: string
-      apikey: string
-      name: string
-      expiresAt: string
-      subdevices: any
+      key: string;
+      photonId: string;
+      apikey: string;
+      name: string;
+      expiresAt: string;
+      subdevices: any;
     }>
-  >([])
+  >([]);
   // Dispositivos seleccionados para flasheo
-  const [selectedDevices, setSelectedDevices] = useState<string[]>([])
+  const [selectedDevices, setSelectedDevices] = useState<string[]>([]);
   // Estado para indicar qué opción se ha seleccionado en el modal ('', 'updateName', 'updateId', 'delete')
-  const [activeOption, setActiveOption] = useState("")
+  const [activeOption, setActiveOption] = useState("");
   // Estado para modal de gestión del dispositivo
-  const [modalVisible, setModalVisible] = useState(false)
+  const [modalVisible, setModalVisible] = useState(false);
   // Estado para modal de configuración
-  const [settingsModalVisible, setSettingsModalVisible] = useState(false)
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
   // Dispositivo seleccionado para gestionar
-  const [selectedDevice, setSelectedDevice] = useState<any>(null)
+  const [selectedDevice, setSelectedDevice] = useState<any>(null);
   // Estados para los inputs de actualización
-  const [updatedName, setUpdatedName] = useState("")
-  const [updatedPhotonId, setUpdatedPhotonId] = useState("")
+  const [updatedName, setUpdatedName] = useState("");
+  const [updatedPhotonId, setUpdatedPhotonId] = useState("");
   // Estado para almacenar los tipos de dispositivos
-  const [deviceTypes, setDeviceTypes] = useState<{ [key: string]: string }>({})
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [deviceTypes, setDeviceTypes] = useState<{ [key: string]: string }>({});
+  const [isRefreshing, setIsRefreshing] = useState(false);
   // Estado para almacenar el estado de conexión de los dispositivos
-  const [deviceConnections, setDeviceConnections] = useState<{ [key: string]: boolean }>({})
+  const [deviceConnections, setDeviceConnections] = useState<{
+    [key: string]: boolean;
+  }>({});
 
-  const router = useRouter()
+  const router = useRouter();
+  const handleFlashDevice = (device: any) => {
+    // 1) Obtén el type que ya guardaste
+    const type = deviceTypes[device.key] || "Photon";
+  
+    // 2) Mapea el type a su platformId numérico
+    const platformMap: Record<string, number> = {
+      Photon: 6,
+      "Photon 2": 32,
+      Electron: 10,
+      Argon: 12,
+      Boron: 13,
+    };
+    const platformId = platformMap[type] || 6;
+  
+    // 3) Navega pasando también platformId
+    router.push({
+      pathname: "./flashDevice",
+      params: {
+        id: device.photonId,
+        name: device.name,
+        type,                   // sigue pasando el nombre legible
+        platformId: String(platformId), // lo convertimos a string para useLocalSearchParams
+        key: device.key,
+        userToken: device.apikey,
+      },
+    });
+  };
 
   useEffect(() => {
     const loadDevices = async () => {
-      const userId = auth.currentUser?.uid
+      const userId = auth.currentUser?.uid;
       if (!userId) {
-        Alert.alert("Error", "Usuario no autenticado.")
-        return
+        Alert.alert("Error", "Usuario no autenticado.");
+        return;
       }
       try {
-        const userDocRef = doc(db, "BD", userId)
-        const userDocSnap = await getDoc(userDocRef)
+        const userDocRef = doc(db, "BD", userId);
+        const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
-          const data = userDocSnap.data()
-          const devicesObj = data.Devices || {}
-          const devicesArray = Object.entries(devicesObj).map(([key, device]: [string, any]) => ({
-            key,
-            photonId: device.photonId,
-            apikey: device.apikey,
-            name: device.name,
-            expiresAt: device.expiresAt,
-            subdevices: device.subdevices,
-          }))
-          setDevices(devicesArray)
+          const data = userDocSnap.data();
+          const devicesObj = data.Devices || {};
+          const devicesArray = Object.entries(devicesObj).map(
+            ([key, device]: [string, any]) => ({
+              key,
+              photonId: device.photonId,
+              apikey: device.apikey,
+              name: device.name,
+              expiresAt: device.expiresAt,
+              subdevices: device.subdevices,
+            })
+          );
+          setDevices(devicesArray);
 
           // Obtener el tipo y estado de conexión de cada dispositivo
-          const types: { [key: string]: string } = {}
-          const connections: { [key: string]: boolean } = {}
+          const types: { [key: string]: string } = {};
+          const connections: { [key: string]: boolean } = {};
 
           for (const device of devicesArray) {
             if (device.photonId && device.apikey) {
               // Obtener tipo de dispositivo
-              const deviceInfo = await fetchDeviceInfo(device.photonId, device.apikey)
-              types[device.key] = deviceInfo.type
-              connections[device.key] = deviceInfo.connected
+              const deviceInfo = await fetchDeviceInfo(
+                device.photonId,
+                device.apikey
+              );
+              types[device.key] = deviceInfo.type;
+              connections[device.key] = deviceInfo.connected;
             }
           }
 
-          setDeviceTypes(types)
-          setDeviceConnections(connections)
+          setDeviceTypes(types);
+          setDeviceConnections(connections);
         } else {
-          Alert.alert("Error", "No se encontró información del usuario.")
+          Alert.alert("Error", "No se encontró información del usuario.");
         }
       } catch (error) {
-        console.error("Error al cargar dispositivos:", error)
-        Alert.alert("Error", "No se pudieron cargar los dispositivos.")
+        console.error("Error al cargar dispositivos:", error);
+        Alert.alert("Error", "No se pudieron cargar los dispositivos.");
       }
-    }
+    };
 
-    loadDevices()
+    loadDevices();
 
     // Configurar intervalo para verificar conexión periódicamente
     const connectionInterval = setInterval(() => {
-      checkDeviceConnections()
-    }, 30000) // Verificar cada 30 segundos
+      checkDeviceConnections();
+    }, 30000); // Verificar cada 30 segundos
 
-    return () => clearInterval(connectionInterval)
-  }, [])
+    return () => clearInterval(connectionInterval);
+  }, []);
 
   // Modificar la función checkDeviceConnections para mostrar un indicador de carga
   const checkDeviceConnections = async () => {
-    setIsRefreshing(true)
-    const connections: { [key: string]: boolean } = {}
+    setIsRefreshing(true);
+    const connections: { [key: string]: boolean } = {};
 
     for (const device of devices) {
       if (device.photonId && device.apikey) {
         try {
-          const response = await fetch(`https://api.particle.io/v1/devices/${device.photonId}`, {
-            headers: {
-              Authorization: `Bearer ${device.apikey}`,
-            },
-          })
+          const response = await fetch(
+            `https://api.particle.io/v1/devices/${device.photonId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${device.apikey}`,
+              },
+            }
+          );
 
           if (response.ok) {
-            const data = await response.json()
-            connections[device.key] = data.connected || false
+            const data = await response.json();
+            connections[device.key] = data.connected || false;
           } else {
-            connections[device.key] = false
+            connections[device.key] = false;
           }
         } catch (error) {
-          console.error("Error al verificar conexión:", error)
-          connections[device.key] = false
+          console.error("Error al verificar conexión:", error);
+          connections[device.key] = false;
         }
       }
     }
 
-    setDeviceConnections(connections)
-    setIsRefreshing(false)
-  }
+    setDeviceConnections(connections);
+    setIsRefreshing(false);
+  };
 
   // Función para obtener información del dispositivo desde la API de Particle
   const fetchDeviceInfo = async (photonId: string, apiKey: string) => {
     try {
-      const response = await fetch(`https://api.particle.io/v1/devices/${photonId}`, {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-        },
-      })
+      const response = await fetch(
+        `https://api.particle.io/v1/devices/${photonId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        }
+      );
 
       if (response.ok) {
-        const data = await response.json()
+        const data = await response.json();
         // Determinar el tipo de dispositivo y estado de conexión
-        let deviceType = "Desconocido"
+        let deviceType = "Desconocido";
 
         if (data.platform_id === 6) {
-          deviceType = "Photon"
+          deviceType = "Photon";
         } else if (data.platform_id === 32 || data.platform_id === 26) {
-          deviceType = "Photon 2"
+          deviceType = "Photon 2";
         } else if (data.platform_id === 10) {
-          deviceType = "Electron"
+          deviceType = "Electron";
         } else if (data.platform_id === 12) {
-          deviceType = "Argon"
+          deviceType = "Argon";
         } else if (data.platform_id === 13) {
-          deviceType = "Boron"
+          deviceType = "Boron";
         }
 
         return {
           type: deviceType,
           connected: data.connected || false,
-        }
+        };
       }
       return {
         type: "Desconocido",
         connected: false,
-      }
+      };
     } catch (error) {
-      console.error("Error al obtener información del dispositivo:", error)
+      console.error("Error al obtener información del dispositivo:", error);
       return {
         type: "Desconocido",
         connected: false,
-      }
+      };
     }
-  }
+  };
 
   // Función para obtener la ruta de la imagen según el tipo de dispositivo
   const getDeviceImageSource = (deviceType: string) => {
     switch (deviceType) {
       case "Photon":
-        return require("../../../assets/images/device_type/photon0.png")
+        return require("../../../assets/images/device_type/photon0.png");
       case "Photon 2":
-        return require("../../../assets/images/device_type/photon2.png")
+        return require("../../../assets/images/device_type/photon2.png");
       case "Electron":
-        return require("../../../assets/images/device_type/electron.png")
+        return require("../../../assets/images/device_type/electron.png");
       case "Argon":
-        return require("../../../assets/images/device_type/argon.png")
+        return require("../../../assets/images/device_type/argon.png");
       case "Boron":
-        return require("../../../assets/images/device_type/boron.png")
+        return require("../../../assets/images/device_type/boron.png");
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   // Alternar la selección para flasheo
   const toggleSelection = (deviceKey: string) => {
     setSelectedDevices((prev) =>
-      prev.includes(deviceKey) ? prev.filter((key) => key !== deviceKey) : [...prev, deviceKey],
-    )
-  }
+      prev.includes(deviceKey)
+        ? prev.filter((key) => key !== deviceKey)
+        : [...prev, deviceKey]
+    );
+  };
 
   // Función para flashear un dispositivo mediante petición al servidor
-  const flashPhoton = async (device: { photonId: string; apikey: string; name: string }) => {
+  const flashPhoton = async (device: {
+    photonId: string;
+    apikey: string;
+    name: string;
+  }) => {
     try {
       if (!device.photonId || !device.apikey) {
-        Alert.alert("Error", `El dispositivo ${device.name} no tiene deviceID o accessToken.`)
-        return
+        Alert.alert(
+          "Error",
+          `El dispositivo ${device.name} no tiene deviceID o accessToken.`
+        );
+        return;
       }
-      const endpoint = "https://server-lightbulb-five.vercel.app/api/flash"
+      const endpoint = "https://server-lightbulb-five.vercel.app/api/flash";
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -227,134 +265,168 @@ const ListUserDevices: React.FC = () => {
           deviceID: device.photonId,
           accessToken: device.apikey,
         }),
-      })
+      });
 
       if (!response.ok) {
-        const errorData = await response.json()
-        console.error(`Error al flashear ${device.name}:`, errorData)
-        Alert.alert("Error", `Error al flashear el dispositivo ${device.name}.`)
-        return
+        const errorData = await response.json();
+        console.error(`Error al flashear ${device.name}:`, errorData);
+        Alert.alert(
+          "Error",
+          `Error al flashear el dispositivo ${device.name}.`
+        );
+        return;
       }
 
-      const data = await response.json()
-      console.log(`Firmware flasheado para ${device.name}:`, data)
-      Alert.alert("Éxito", `Firmware del dispositivo ${device.name} flasheado correctamente.`)
+      const data = await response.json();
+      console.log(`Firmware flasheado para ${device.name}:`, data);
+      Alert.alert(
+        "Éxito",
+        `Firmware del dispositivo ${device.name} flasheado correctamente.`
+      );
     } catch (error: any) {
-      console.error(`Error al flashear ${device.name}:`, error.response ? error.response.data : error.message)
-      Alert.alert("Error", `Error al flashear el dispositivo ${device.name}.`)
+      console.error(
+        `Error al flashear ${device.name}:`,
+        error.response ? error.response.data : error.message
+      );
+      Alert.alert("Error", `Error al flashear el dispositivo ${device.name}.`);
     }
-  }
+  };
 
   // Flashear todos los dispositivos seleccionados
   const handleFlashDevices = async () => {
+    {/*
     if (selectedDevices.length === 0) {
-      Alert.alert("Atención", "No se seleccionó ningún dispositivo para flashear.")
-      return
-    }
+      Alert.alert(
+        "Atención",
+        "No se seleccionó ningún dispositivo para flashear."
+      );
+      return;
+    }*/}
     for (const key of selectedDevices) {
-      const device = devices.find((d) => d.key === key)
+      const device = devices.find((d) => d.key === key);
       if (device) {
-        await flashPhoton(device)
+        await flashPhoton(device);
       }
     }
-    setSelectedDevices([])
-  }
+    setSelectedDevices([]);
+  };
 
   const handleSettingsPress = () => {
-    setSettingsModalVisible(true)
-  }
+    setSettingsModalVisible(true);
+  };
 
   // Abrir modal de gestión para un dispositivo y resetear opción activa
   const openDeviceManagementModal = (device: any) => {
-    setSelectedDevice(device)
-    setUpdatedName(device.name)
-    setUpdatedPhotonId(device.photonId)
-    setActiveOption("")
-    setModalVisible(true)
-  }
+    setSelectedDevice(device);
+    setUpdatedName(device.name);
+    setUpdatedPhotonId(device.photonId);
+    setActiveOption("");
+    setModalVisible(true);
+  };
 
   // Función para actualizar el nombre del dispositivo
   const updateDeviceName = async () => {
-    if (!selectedDevice) return
-    const userId = auth.currentUser?.uid
+    if (!selectedDevice) return;
+    const userId = auth.currentUser?.uid;
     if (!userId) {
-      Alert.alert("Error", "Usuario no autenticado.")
-      return
+      Alert.alert("Error", "Usuario no autenticado.");
+      return;
     }
     try {
-      const docRef = doc(db, "BD", userId)
-      const newName = updatedName.trim() === "" ? selectedDevice.name : updatedName
+      const docRef = doc(db, "BD", userId);
+      const newName =
+        updatedName.trim() === "" ? selectedDevice.name : updatedName;
       await updateDoc(docRef, {
         [`Devices.${selectedDevice.key}.name`]: newName,
-      })
-      setDevices((prev) => prev.map((d) => (d.key === selectedDevice.key ? { ...d, name: newName } : d)))
-      setModalVisible(false)
-      Alert.alert("Éxito", "Nombre del dispositivo actualizado correctamente.")
+      });
+      setDevices((prev) =>
+        prev.map((d) =>
+          d.key === selectedDevice.key ? { ...d, name: newName } : d
+        )
+      );
+      setModalVisible(false);
+      Alert.alert("Éxito", "Nombre del dispositivo actualizado correctamente.");
     } catch (error) {
-      console.error("Error al actualizar el nombre del dispositivo:", error)
-      Alert.alert("Error", "No se pudo actualizar el nombre del dispositivo.")
+      console.error("Error al actualizar el nombre del dispositivo:", error);
+      Alert.alert("Error", "No se pudo actualizar el nombre del dispositivo.");
     }
-  }
+  };
 
   // Función para actualizar el ID del dispositivo (photonId)
   const updateDeviceID = async () => {
-    if (!selectedDevice) return
-    const userId = auth.currentUser?.uid
+    if (!selectedDevice) return;
+    const userId = auth.currentUser?.uid;
     if (!userId) {
-      Alert.alert("Error", "Usuario no autenticado.")
-      return
+      Alert.alert("Error", "Usuario no autenticado.");
+      return;
     }
     // Validar que el nuevo ID tenga exactamente 24 caracteres hexadecimales
-    const hexRegex = /^[0-9A-Fa-f]{24}$/
+    const hexRegex = /^[0-9A-Fa-f]{24}$/;
     if (updatedPhotonId.trim() !== "" && !hexRegex.test(updatedPhotonId)) {
-      Alert.alert("Error", "El nuevo ID debe tener exactamente 24 caracteres hexadecimales.")
-      return
+      Alert.alert(
+        "Error",
+        "El nuevo ID debe tener exactamente 24 caracteres hexadecimales."
+      );
+      return;
     }
     try {
-      const docRef = doc(db, "BD", userId)
-      const newID = updatedPhotonId.trim() === "" ? selectedDevice.photonId : updatedPhotonId
+      const docRef = doc(db, "BD", userId);
+      const newID =
+        updatedPhotonId.trim() === ""
+          ? selectedDevice.photonId
+          : updatedPhotonId;
       await updateDoc(docRef, {
         [`Devices.${selectedDevice.key}.photonId`]: newID,
-      })
-      setDevices((prev) => prev.map((d) => (d.key === selectedDevice.key ? { ...d, photonId: newID } : d)))
-      setModalVisible(false)
-      Alert.alert("Éxito", "ID del dispositivo actualizado correctamente.")
+      });
+      setDevices((prev) =>
+        prev.map((d) =>
+          d.key === selectedDevice.key ? { ...d, photonId: newID } : d
+        )
+      );
+      setModalVisible(false);
+      Alert.alert("Éxito", "ID del dispositivo actualizado correctamente.");
     } catch (error) {
-      console.error("Error al actualizar el ID del dispositivo:", error)
-      Alert.alert("Error", "No se pudo actualizar el ID del dispositivo.")
+      console.error("Error al actualizar el ID del dispositivo:", error);
+      Alert.alert("Error", "No se pudo actualizar el ID del dispositivo.");
     }
-  }
+  };
 
   // Función para eliminar el dispositivo con confirmación
   const deleteDevice = async () => {
-    if (!selectedDevice) return
-    const userId = auth.currentUser?.uid
+    if (!selectedDevice) return;
+    const userId = auth.currentUser?.uid;
     if (!userId) {
-      Alert.alert("Error", "Usuario no autenticado.")
-      return
+      Alert.alert("Error", "Usuario no autenticado.");
+      return;
     }
-    Alert.alert("Confirmación", "¿Estás seguro de que deseas eliminar este dispositivo?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            const docRef = doc(db, "BD", userId)
-            await updateDoc(docRef, {
-              [`Devices.${selectedDevice.key}`]: deleteField(),
-            })
-            setDevices((prev) => prev.filter((d) => d.key !== selectedDevice.key))
-            setModalVisible(false)
-            Alert.alert("Éxito", "Dispositivo eliminado correctamente.")
-          } catch (error) {
-            console.error("Error al eliminar el dispositivo:", error)
-            Alert.alert("Error", "No se pudo eliminar el dispositivo.")
-          }
+    Alert.alert(
+      "Confirmación",
+      "¿Estás seguro de que deseas eliminar este dispositivo?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const docRef = doc(db, "BD", userId);
+              await updateDoc(docRef, {
+                [`Devices.${selectedDevice.key}`]: deleteField(),
+              });
+              setDevices((prev) =>
+                prev.filter((d) => d.key !== selectedDevice.key)
+              );
+              setModalVisible(false);
+              Alert.alert("Éxito", "Dispositivo eliminado correctamente.");
+            } catch (error) {
+              console.error("Error al eliminar el dispositivo:", error);
+              Alert.alert("Error", "No se pudo eliminar el dispositivo.");
+            }
+          },
         },
-      },
-    ])
-  }
+      ]
+    );
+  };
 
   // Renderizado del contenido del modal según la opción seleccionada
   const renderModalContent = () => {
@@ -375,11 +447,14 @@ const ListUserDevices: React.FC = () => {
               value={updatedName}
               onChangeText={setUpdatedName}
             />
-            <TouchableOpacity style={styles.actionButton} onPress={updateDeviceName}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={updateDeviceName}
+            >
               <Text style={styles.actionButtonText}>Actualizar nombre</Text>
             </TouchableOpacity>
           </View>
-        )
+        );
       case "updateId":
         return (
           <View style={styles.modalContent}>
@@ -396,66 +471,100 @@ const ListUserDevices: React.FC = () => {
               value={updatedPhotonId}
               onChangeText={setUpdatedPhotonId}
             />
-            <TouchableOpacity style={styles.actionButton} onPress={updateDeviceID}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={updateDeviceID}
+            >
               <Text style={styles.actionButtonText}>Actualizar ID</Text>
             </TouchableOpacity>
           </View>
-        )
+        );
       case "delete":
         return (
           <View style={styles.modalContent}>
-            <TouchableOpacity style={styles.deleteButton} onPress={deleteDevice}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={deleteDevice}
+            >
               <Text style={styles.actionButtonText}>Borrar Dispositivo</Text>
             </TouchableOpacity>
           </View>
-        )
+        );
       default:
         return (
           <View style={styles.modalOptionsContainer}>
-            <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("updateName")}>
+            <TouchableOpacity
+              style={styles.modalOptionButton}
+              onPress={() => setActiveOption("updateName")}
+            >
               <Edit size={20} color="#333" style={styles.optionIcon} />
               <Text style={styles.modalOptionText}>Actualizar Nombre</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("updateId")}>
+            <TouchableOpacity
+              style={styles.modalOptionButton}
+              onPress={() => setActiveOption("updateId")}
+            >
               <Edit size={20} color="#333" style={styles.optionIcon} />
               <Text style={styles.modalOptionText}>Actualizar ID</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.modalOptionButton} onPress={() => setActiveOption("delete")}>
+            <TouchableOpacity
+              style={styles.modalOptionButton}
+              onPress={() => setActiveOption("delete")}
+            >
               <Trash2 size={20} color="red" style={styles.optionIcon} />
-              <Text style={[styles.modalOptionText, { color: "red" }]}>Eliminar Dispositivo</Text>
+              <Text style={[styles.modalOptionText, { color: "red" }]}>
+                Eliminar Dispositivo
+              </Text>
             </TouchableOpacity>
           </View>
-        )
+        );
     }
-  }
+  };
 
   // Navegar a la pantalla de subdispositivos
   const handleSelectDevice = (deviceKey: string) => {
     router.push({
       pathname: "./listSubDevices",
       params: { deviceKey },
-    })
-  }
+    });
+  };
 
   const renderItem = ({ item }: { item: any }) => {
-    const isConnected = deviceConnections[item.key] || false
-    const deviceType = deviceTypes[item.key] || "Desconocido"
-    const deviceImage = getDeviceImageSource(deviceType)
+    const isConnected = deviceConnections[item.key] || false;
+    const deviceType = deviceTypes[item.key] || "Desconocido";
+    const deviceImage = getDeviceImageSource(deviceType);
 
     return (
       <View style={styles.deviceItem}>
-        <TouchableOpacity style={styles.deviceButton} onPress={() => handleSelectDevice(item.key)}>
+        <TouchableOpacity
+          style={styles.deviceButton}
+          onPress={() => handleSelectDevice(item.key)}
+        >
           <View style={styles.deviceInfo}>
             <Text style={styles.deviceName}>{item.name}</Text>
             <Text style={styles.deviceId}>ID: {item.photonId}</Text>
             <View style={styles.deviceTypeContainer}>
-              {deviceImage && <Image source={deviceImage} style={styles.deviceTypeImage} resizeMode="contain" />}
+              {deviceImage && (
+                <Image
+                  source={deviceImage}
+                  style={styles.deviceTypeImage}
+                  resizeMode="contain"
+                />
+              )}
               <Text style={styles.deviceType}>Tipo: {deviceType}</Text>
               <View style={styles.connectionStatusContainer}>
                 {isConnected ? (
-                  <Wifi color="#4CAF50" size={16} style={styles.connectionIcon} />
+                  <Wifi
+                    color="#4CAF50"
+                    size={16}
+                    style={styles.connectionIcon}
+                  />
                 ) : (
-                  <WifiOff color="#F44336" size={16} style={styles.connectionIcon} />
+                  <WifiOff
+                    color="#F44336"
+                    size={16}
+                    style={styles.connectionIcon}
+                  />
                 )}
               </View>
             </View>
@@ -464,37 +573,58 @@ const ListUserDevices: React.FC = () => {
         </TouchableOpacity>
 
         <View style={styles.deviceActions}>
-          <TouchableOpacity style={styles.optionsButton} onPress={() => openDeviceManagementModal(item)}>
+          <TouchableOpacity
+            style={styles.optionsButton}
+            onPress={() => openDeviceManagementModal(item)}
+          >
             <Text style={styles.optionsButtonText}>⋮</Text>
           </TouchableOpacity>
 
+          <TouchableOpacity onPress={() => handleFlashDevice(item)}>
+            <Zap size={20} color="#555" style={{ marginRight: 8 }} />
+          </TouchableOpacity>
+          {/*
           <Checkbox
             value={selectedDevices.includes(item.key)}
             onValueChange={() => toggleSelection(item.key)}
             style={styles.checkbox}
             color={selectedDevices.includes(item.key) ? "#007BFF" : undefined}
           />
+          */}
         </View>
       </View>
-    )
-  }
+    );
+  };
 
-  // He (o E) Agregao' un botón de actualizao
+  // He agregado un botón de actualizado
 
   return (
     <View style={styles.container}>
       <Navbar title="Dispositivos" onSettingsPress={handleSettingsPress} />
 
-      <SettingsModal isVisible={settingsModalVisible} onClose={() => setSettingsModalVisible(false)} />
+      <SettingsModal
+        isVisible={settingsModalVisible}
+        onClose={() => setSettingsModalVisible(false)}
+      />
 
       <View style={styles.content}>
-        <TouchableOpacity style={styles.refreshButton} onPress={checkDeviceConnections} disabled={isRefreshing}>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={checkDeviceConnections}
+          disabled={isRefreshing}
+        >
           {isRefreshing ? (
-            <ActivityIndicator color="#FFFFFF" size="small" style={{ marginRight: 8 }} />
+            <ActivityIndicator
+              color="#FFFFFF"
+              size="small"
+              style={{ marginRight: 8 }}
+            />
           ) : (
             <RefreshCw color="#FFFFFF" size={16} style={{ marginRight: 8 }} />
           )}
-          <Text style={styles.refreshButtonText}>{isRefreshing ? "Actualizando..." : "Actualizar conexiones"}</Text>
+          <Text style={styles.refreshButtonText}>
+            {isRefreshing ? "Actualizando..." : "Actualizar conexiones"}
+          </Text>
         </TouchableOpacity>
 
         <FlatList
@@ -503,28 +633,49 @@ const ListUserDevices: React.FC = () => {
           renderItem={renderItem}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No hay dispositivos creados aún.</Text>
-              <TouchableOpacity style={styles.addDeviceButton} onPress={() => router.push("../controllers/addControllers")}>
-                <Text style={styles.addDeviceButtonText}>Agregar Dispositivo</Text>
+              <Text style={styles.emptyText}>
+                No hay dispositivos creados aún.
+              </Text>
+              <TouchableOpacity
+                style={styles.addDeviceButton}
+                onPress={() => router.push("../controllers/addControllers")}
+              >
+                <Text style={styles.addDeviceButtonText}>
+                  Agregar Dispositivo
+                </Text>
               </TouchableOpacity>
             </View>
           }
         />
-
+{/* Botón para flashear dispositivos seleccionados 
         {devices.length > 0 && (
-          <TouchableOpacity style={styles.flashButton} onPress={handleFlashDevices}>
+          <TouchableOpacity
+            style={styles.flashButton}
+            onPress={handleFlashDevices}
+          >
             <Zap size={20} color="#fff" style={{ marginRight: 8 }} />
-            <Text style={styles.flashButtonText}>Flashear dispositivos seleccionados</Text>
+            <Text style={styles.flashButtonText}>
+              Flashear dispositivos seleccionados
+            </Text>
           </TouchableOpacity>
         )}
+*/}
 
         {/* Modal de gestión del dispositivo */}
-        <Modal visible={modalVisible} animationType="fade" transparent onRequestClose={() => setModalVisible(false)}>
+        <Modal
+          visible={modalVisible}
+          animationType="fade"
+          transparent
+          onRequestClose={() => setModalVisible(false)}
+        >
           <View style={styles.modalBackground}>
             <View style={styles.modalContainer}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Gestión del Dispositivo</Text>
-                <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
+                <TouchableOpacity
+                  onPress={() => setModalVisible(false)}
+                  style={styles.closeButton}
+                >
                   <Text style={styles.closeButtonText}>✕</Text>
                 </TouchableOpacity>
               </View>
@@ -535,10 +686,12 @@ const ListUserDevices: React.FC = () => {
       </View>
 
       {/* Barra de navegación inferior */}
-      <BottomNavbar storedApiKey={devices.length > 0 ? devices[0].apikey : ""} />
+      <BottomNavbar
+        storedApiKey={devices.length > 0 ? devices[0].apikey : ""}
+      />
     </View>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
@@ -783,7 +936,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-})
+});
 
-export default ListUserDevices
-
+export default ListUserDevices;

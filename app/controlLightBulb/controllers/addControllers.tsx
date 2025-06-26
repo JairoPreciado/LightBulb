@@ -1,12 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, ScrollView } from "react-native"
+import { View, Text, TextInput, Alert, TouchableOpacity, StyleSheet, ScrollView, Linking  } from "react-native"
 import { auth, db } from "../../../firebaseConfiguration"
 import { doc, setDoc } from "firebase/firestore"
 import { useRouter } from "expo-router"
 import Checkbox from "expo-checkbox"
-import { Key, Database } from "lucide-react-native"
+import { Key, Database, Info } from "lucide-react-native"
 import Navbar from "../../components/navbar"
 import BottomNavbar from "../../components/bottom-navbar"
 import SettingsModal from "../settings-modal"
@@ -23,7 +23,7 @@ const AddDevice = () => {
   const [modalVisible, setModalVisible] = useState(false)
 
   // Validaciones
-  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-F]+$/.test(photonId)
+  const isPhotonIdValid = photonId.length === 24 && /^[0-9A-Fa-f]+$/.test(photonId)
   const isEmailValid = email.includes("@")
   const isPasswordValid = password.length > 0
   const isDistinctNameValid = distinctName.trim().length > 0
@@ -122,6 +122,18 @@ const AddDevice = () => {
       }
     }
   }
+  // 2. Ajusta showInfo para recibir opcionalmente una URL y añadir un botón
+  const showInfo = (message: string, url?: string) => {
+    const buttons = url
+     ? [
+          { text: "Configurar dispositivo en pagina", onPress: () => Linking.openURL(url) },
+          { text: "OK", style: "cancel" as const }
+        ]
+      : [{ text: "OK", style: "cancel" as const }]
+    Alert.alert("Información", message, buttons)
+  }
+
+
 
   return (
     <View style={styles.container}>
@@ -131,15 +143,17 @@ const AddDevice = () => {
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Información del Dispositivo</Text>
-
+          <Text style={styles.sectionTitle}>Información del Dispositivo <TouchableOpacity onPress={() => showInfo("Recuerda que debes tener un dispositivo IoT de particle vinculado a tu cuenta de particle para agregarlo aquí.", "https://setup.particle.io/")}>
+              <Info size={15} color="#555" />
+          </TouchableOpacity>
+          </Text>
           <View style={styles.inputGroup}>
             <Text style={styles.label}>ID del Photon</Text>
             <TextInput
               style={[styles.input, !isPhotonIdValid && photonId.length > 0 && styles.inputError]}
               placeholder="Ingresa el ID de 24 caracteres"
               value={photonId}
-              onChangeText={(text) => setPhotonId(text.toUpperCase())}
+              onChangeText={(text) => setPhotonId(text)}
               autoCapitalize="characters"
               maxLength={24}
             />
@@ -161,8 +175,11 @@ const AddDevice = () => {
         </View>
 
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Credenciales de Particle</Text>
-
+          <Text style={styles.sectionTitle}>Credenciales de Particle <TouchableOpacity onPress={() => showInfo("Recuerda que necesitas una cuenta en Particle y credenciales válidas para generar tu API Key.")}>
+              <Info size={15} color="#555" />
+            </TouchableOpacity>
+          </Text>
+          
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Correo Electrónico</Text>
             <TextInput
