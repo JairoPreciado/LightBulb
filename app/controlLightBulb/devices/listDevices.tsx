@@ -436,10 +436,11 @@ const ListUserDevices: React.FC = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalLabel}>Editar Nombre</Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput,{ backgroundColor: "#f0f0f0", color: "#888" },]}
               placeholder="Nombre actual"
               value={selectedDevice ? selectedDevice.name : ""}
               editable={false}
+              aria-disabled
             />
             <TextInput
               style={styles.modalInput}
@@ -460,10 +461,11 @@ const ListUserDevices: React.FC = () => {
           <View style={styles.modalContent}>
             <Text style={styles.modalLabel}>Editar ID</Text>
             <TextInput
-              style={styles.modalInput}
+              style={[styles.modalInput,{ backgroundColor: "#f0f0f0", color: "#888" },]}
               placeholder="ID actual"
               value={selectedDevice ? selectedDevice.photonId : ""}
               editable={false}
+              aria-disabled
             />
             <TextInput
               style={styles.modalInput}

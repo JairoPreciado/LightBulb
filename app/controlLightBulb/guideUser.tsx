@@ -1,146 +1,257 @@
 "use client"
 
 import { useState } from "react"
-import { View, Text, StyleSheet, ScrollView, Image } from "react-native"
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native"
 import { useRouter } from "expo-router"
 import Navbar from "../components/navbar"
 import BottomNavbar from "../components/bottom-navbar"
 import SettingsModal from "./settings-modal"
+import ImageModal from "../components/imageModal"
+import guideImages from "../utils/guideImages"
 
-const UserGuide = () => {
+const GuideUser = () => {
   const router = useRouter()
-  const [modalVisible, setModalVisible] = useState(false)
+  const [settingsVisible, setSettingsVisible] = useState(false)
+  const [imageModalVisible, setImageModalVisible] = useState(false)
+  const [activeImages, setActiveImages] = useState<any[]>([])
+  const [activeIndex, setActiveIndex] = useState(0)
 
   const handleSettingsPress = () => {
-    setModalVisible(true)
+    setSettingsVisible(true)
   }
-// deberias de actualizar esta vista ///// pendiente
+
+  const openImageModal = (topicKey: string) => {
+    const images = guideImages[topicKey]
+    if (images) {
+      const imageArray = Array.isArray(images) ? images : [images]
+      setActiveImages(imageArray)
+      setActiveIndex(0)
+      setImageModalVisible(true)
+    }
+  }
+
+  const closeImageModal = () => {
+    setImageModalVisible(false)
+    setActiveImages([])
+    setActiveIndex(0)
+  }
+
+  const showNextImage = () => {
+    setActiveIndex((prev) => (prev + 1) % activeImages.length)
+  }
+
+  const showPrevImage = () => {
+    setActiveIndex((prev) => (prev - 1 + activeImages.length) % activeImages.length)
+  }
+
   return (
     <View style={styles.container}>
       <Navbar title="Guía de Usuario" onSettingsPress={handleSettingsPress} />
-
-      <SettingsModal isVisible={modalVisible} onClose={() => setModalVisible(false)} />
+      <SettingsModal isVisible={settingsVisible} onClose={() => setSettingsVisible(false)} />
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <Text style={styles.text}>
-          Bienvenido a la guía de usuario de nuestra aplicación. Aquí encontrarás información sobre cómo navegar y
-          utilizar las funcionalidades principales de la app. Sigue leyendo para descubrir cómo sacar el máximo
-          provecho.
+          Bienvenido a la guía de usuario de Control Particle, tu herramienta integral para la gestión de dispositivos IoT con tecnología Photon.
+          Aquí encontrarás una explicación general de las funciones más importantes de la app.
         </Text>
 
-        <Text style={styles.subtitle}>1. Pantalla de Inicio</Text>
-        <Text style={styles.text}>
-          La pantalla principal de la aplicación te da acceso rápido a las principales funciones. Desde aquí puedes
-          navegar a las secciones de Credenciales, Dispositivos, Guía de Usuario y Configuración mediante botones
-          horizontales. También encontrarás un acceso rápido a configuraciones en la esquina superior derecha.
-        </Text>
-        <Image source={require("../../assets/images/home.jpeg")} style={styles.image} />
+        {/* Tópico 1 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>1. Pantalla de Inicio</Text>
+          <Text style={styles.text}>Es la pantalla principal de la aplicación, donde se muestra un resumen básico antes de navegar a otras secciones.</Text>
+          <TouchableOpacity onPress={() => openImageModal("inicio")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.subtitle}>2. Credenciales</Text>
-        <Text style={styles.text}>
-          En la sección de Credenciales puedes generar claves API y asociarlas con tus dispositivos Photon. Estas claves
-          son necesarias para interactuar con el hardware de IoT conectado a la nube. Asegúrate de guardar las claves
-          generadas en la base de datos para un acceso rápido.
-        </Text>
-        <Image source={require("../../assets/images/credenciales.jpeg")} style={styles.image} />
 
-        <Text style={styles.subtitle}>3. Dispositivos</Text>
-        <Text style={styles.text}>
-          La sección de Dispositivos te muestra una lista de todos los dispositivos registrados en tu cuenta. Puedes ver
-          detalles como el ID del Photon, la clave API asociada y el estado del dispositivo (en línea o desconectado).
-          Esta sección es clave para gestionar y supervisar tu ecosistema IoT.
-        </Text>
-        <Image source={require("../../assets/images/lista.jpeg")} style={styles.image} />
+        {/* Tópico 2 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>2. Credenciales</Text>
+          <Text style={styles.text}>Aquí puedes crear credenciales de acceso. Al generar una, se registra automáticamente el dispositivo en tu cuenta.</Text>
+          <TouchableOpacity onPress={() => openImageModal("credenciales")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.subtitle}>4. Gestión de Cuenta</Text>
-        <Text style={styles.text}>
-          La sección de Gestión de Cuenta te permite realizar cambios importantes en tu perfil. Puedes cambiar tu
-          contraseña, eliminar tu cuenta o cerrar sesión de manera segura. Para acceder a esta sección, selecciona el
-          ícono de engranaje en la pantalla principal y elige la opción "Gestión de Cuenta".
-        </Text>
-        <Image source={require("../../assets/images/gestion.jpeg")} style={styles.image} />
+        {/* Tópico 3 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>3. Lista de Dispositivos</Text>
+          <Text style={styles.text}>Muestra los dispositivos registrados. Desde aquí puedes eliminar alguno o editar su información como el nombre o ID.</Text>
+          <TouchableOpacity onPress={() => openImageModal("listaDeDispositivos")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
 
-        <Text style={styles.subtitle}>5. Manipulación de Dispositivos</Text>
-        <Text style={styles.text}>
-          Cada dispositivo registrado cuenta con un apartado dedicado para su manipulación. Desde esta sección puedes
-          realizar las siguientes acciones:
-        </Text>
-        <Text style={styles.text}>
-          - **Crear horarios de encendido y apagado:** Configura horarios específicos en los que el dispositivo se
-          encenderá y apagará automáticamente.
-        </Text>
-        <Text style={styles.text}>
-          - **Visualizar consumo eléctrico:** Monitorea el consumo de energía del dispositivo en tiempo real. También
-          puedes acceder a estadísticas históricas para entender mejor el uso energético de tu ecosistema IoT.
-        </Text>
-        <View style={styles.imageRow}>
-          <Image source={require("../../assets/images/dispositivo.jpeg")} style={styles.imageRows} />
-          <Image source={require("../../assets/images/horarios.jpeg")} style={styles.imageRows} />
-          <Image source={require("../../assets/images/consumo.jpeg")} style={styles.imageRows} />
+        {/* Tópico 4 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>4. Información del Dispositivo</Text>
+          <Text style={styles.text}>Consulta de nombre, ID y estado del dispositivo seleccionado.</Text>
+          <TouchableOpacity onPress={() => openImageModal("dispositivoSeleccionado")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Tópico 5 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>5. Control de Dispositivo</Text>
+          <Text style={styles.text}>Interacción directa con dispositivos: encender, apagar y visualizar su estado.</Text>
+          <TouchableOpacity onPress={() => openImageModal("dispositivoControlar")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tópico 6 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>6. Flasheo de Dispositivo</Text>
+          <Text style={styles.text}>Permite ingresar código y compilarlo directamente en los servidores de Particle. Después, con el endpoint de la compilación, puedes enviar una petición para flashear el dispositivo y actualizar su firmware.</Text>
+          <TouchableOpacity onPress={() => openImageModal("flasheoDeDispositivo")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tópico 7 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>7. Programar Horario</Text>
+          <Text style={styles.text}>Configura horarios automáticos para encender o apagar tus dispositivos IoT según tus necesidades.</Text>
+          <TouchableOpacity onPress={() => openImageModal("dispositivoProgramarHorario")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tópico 8 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>8. Notificaciones</Text>
+          <Text style={styles.text}>Información sobre alertas importantes y recordatorios.</Text>
+          <TouchableOpacity onPress={() => openImageModal("notificaciones")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Tópico 9 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>9. Gestión de Cuenta</Text>
+          <Text style={styles.text}>Permite cambiar la contraseña de tu cuenta, cerrar sesión o eliminarla permanentemente.</Text>
+          <TouchableOpacity onPress={() => openImageModal("gestionDeCuenta")} style={styles.imageButton}>
+            <Text style={styles.imageButtonText}>Ver imagen(es)</Text>
+          </TouchableOpacity>
+        </View>
+        
+        {/* Tópico 10 */}
+        <View style={styles.topicContainer}>
+          <Text style={styles.subtitle}>10. Soporte Técnico</Text>
+          <Text style={styles.text}>
+            Para asistencia personalizada, puedes contactarnos directamente a los correos: {"\n"}
+            <Text style={{fontWeight: "bold"}}>jpreciado24@ucol.mx</Text> o <Text style={{fontWeight: "bold"}}>mrdonjuan@ucol.mx</Text>. {"\n"}
+            Estamos aquí para ayudarte con cualquier duda o inconveniente que tengas.
+          </Text>
         </View>
 
         <Text style={styles.conclusion}>
-          Esperamos que esta guía te ayude a entender y utilizar la aplicación de manera eficiente. Si tienes alguna
-          duda, consulta nuestra sección de preguntas frecuentes o contacta al soporte técnico.
+          Esta guía se actualiza constantemente para ofrecerte la mejor experiencia. ¡Gracias por confiar en Control Particle!
         </Text>
+
       </ScrollView>
 
-      {/* Barra de navegación inferior */}
+      <ImageModal visible={imageModalVisible} onClose={closeImageModal} source={activeImages[activeIndex]}>
+        {activeImages.length > 1 && (
+          <>
+            <TouchableOpacity onPress={showPrevImage} style={styles.navButtonLeft}>
+              <Text style={styles.navButtonText}>‹</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={showNextImage} style={styles.navButtonRight}>
+              <Text style={styles.navButtonText}>›</Text>
+            </TouchableOpacity>
+          </>
+        )}
+      </ImageModal>
+
       <BottomNavbar />
     </View>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f5f5f5",
+  container: { 
+    flex: 1, 
+    backgroundColor: "#f5f5f5" 
   },
-  scrollContainer: {
-    padding: 20,
-    paddingBottom: 40,
+  scrollContainer: { 
+    padding: 20, 
+    paddingBottom: 40 
   },
-  subtitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginTop: 20,
-    marginBottom: 10,
-    color: "#333",
+  subtitle: { 
+    fontSize: 18, 
+    fontWeight: "bold", 
+    marginTop: 20, 
+    marginBottom: 10, 
+    color: "#333" 
   },
-  text: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 10,
-    color: "#444",
-  },
-  image: {
-    width: "100%",
-    height: 200,
-    resizeMode: "contain",
-    marginVertical: 15,
+  text: { 
+    fontSize: 16, 
+    lineHeight: 24, 
+    marginBottom: 10, 
+    color: "#444", 
+    textAlign: "justify" 
+  }, 
+  imageButton: {
+    alignSelf: "center",         // centra el botón horizontalmente
+    backgroundColor: "#007bff",
+    paddingHorizontal: 20,       // más espacio horizontal
+    paddingVertical: 10,         // más espacio vertical
     borderRadius: 8,
+    marginVertical: 8,
+    alignItems: "center",        // centra el texto horizontalmente dentro del botón
+    justifyContent: "center",    // centra el texto verticalmente dentro del botón
+    minWidth: 140,               // ancho mínimo para mejor proporción
   },
-  imageRows: {
-    width: 100,
-    height: 200,
-    resizeMode: "contain",
-    marginHorizontal: 5,
-  },
-  imageRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginVertical: 15,
-  },
-  conclusion: {
-    fontSize: 16,
-    lineHeight: 24,
-    textAlign: "center",
-    marginTop: 20,
+  imageButtonText: { 
+    color: "#fff", 
     fontWeight: "bold",
-    color: "#333",
   },
+  conclusion: { 
+    fontSize: 16, 
+    lineHeight: 24, 
+    textAlign: "center", 
+    marginTop: 20, 
+    fontWeight: "bold", 
+    color: "#333" 
+  },
+  navButtonLeft: {
+    position: "absolute",
+    left: 10,
+    top: "50%",
+    padding: 10,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 20,
+  },
+  navButtonRight: {
+    position: "absolute",
+    right: 10,
+    top: "50%",
+    padding: 10,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 20,
+  },
+  navButtonText: {
+    color: "#fff",
+    fontSize: 30,
+    fontWeight: "bold",
+  },
+  topicContainer: {
+  backgroundColor: "#BBDEFB",
+  borderRadius: 12,
+  padding: 15,
+  marginVertical: 10,
+  // Sombra para iOS
+  shadowColor: "#000",
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.1,
+  shadowRadius: 4,
+  // Elevación para Android
+  elevation: 3,
+},
+
 })
 
-export default UserGuide
-
+export default GuideUser
