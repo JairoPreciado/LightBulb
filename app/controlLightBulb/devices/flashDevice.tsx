@@ -1,15 +1,7 @@
 import { useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-} from "react-native";
+import { Buffer } from "buffer";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, ActivityIndicator,} from "react-native";
 import Navbar from "../../components/navbar";
 import BottomNavbar from "../../components/bottom-navbar";
 import SettingsModal from "../settings-modal";
@@ -319,50 +311,65 @@ int cambiarEstado(String command, int pin, bool &estado) {
   };
 
   const handleRemoteFlash = async () => {
-    if (!binaryUrl) return;
-    setStatus("working");
-    let fileUri = "";
-    try {
-      // 1) Descargar el binario al almacenamiento local
-      const downloadUrl = `https://api.particle.io${binaryUrl}?access_token=${userToken}`;
-      fileUri = FileSystem.documentDirectory + 'firmware.bin';
-      await FileSystem.downloadAsync(downloadUrl, fileUri);
+  if (!binaryUrl) return;
+  setStatus("working");
+  let fileUri = "";
+  try {
+    // 1️⃣ Descargar el binario al almacenamiento local usando headers
+    const downloadUrl = `https://api.particle.io${binaryUrl}`;
+    fileUri = FileSystem.documentDirectory + 'firmware.bin';
 
-      // 2) Preparar FormData con el archivo descargado
-      const form = new FormData();
-      form.append('file', {
-        uri: fileUri,
-        name: 'firmware.bin',
-        type: 'application/octet-stream',
-      } as any);
+    const downloadResp = await fetch(downloadUrl, {
+      headers: {
+        Authorization: `Bearer ${userToken}`, // ✅ Nueva forma correcta
+      },
+    });
 
-      // 3) Enviar OTA al dispositivo (PUT multipart/form-data)
-      const resp = await fetch(
-        `https://api.particle.io/v1/devices/${id}?access_token=${userToken}`,
-        {
-          method: 'PUT',
-          body: form,
-        }
-      );
-      const result = await resp.json();
-      if (!resp.ok) throw new Error(result.error || 'Error al flashear');
+    if (!downloadResp.ok) {
+      throw new Error(`Error al descargar binario: ${downloadResp.status}`);
+    }
 
-      Alert.alert('Flash iniciado', 'El dispositivo está recibiendo el binario.');
-    } catch (err: any) {
-      console.error(err);
-      Alert.alert('Error', err.message || 'Error al flashear');
-    } finally {
-      setStatus('idle');
-      // 4) Borrar archivo local para liberar espacio
-      if (fileUri) {
-        try {
-          await FileSystem.deleteAsync(fileUri, { idempotent: true });
-        } catch (e) {
-          console.warn('No se pudo borrar el archivo:', fileUri, e);
-        }
+    const arrayBuffer = await downloadResp.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
+    await FileSystem.writeAsStringAsync(fileUri, Buffer.from(buffer).toString('base64'), {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+
+    // 2️⃣ Preparar FormData con el archivo descargado
+    const form = new FormData();
+    form.append('file', {
+      uri: fileUri,
+      name: 'firmware.bin',
+      type: 'application/octet-stream',
+    } as any);
+
+    // 3️⃣ Enviar OTA al dispositivo con Authorization header
+    const resp = await fetch(`https://api.particle.io/v1/devices/${id}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${userToken}`, // ✅ Nueva forma correcta
+      },
+      body: form,
+    });
+
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.error || 'Error al flashear');
+
+    Alert.alert('Flash iniciado', 'El dispositivo está recibiendo el binario.');
+  } catch (err: any) {
+    console.error(err);
+    Alert.alert('Error', err.message || 'Error al flashear');
+  } finally {
+    setStatus('idle');
+    if (fileUri) {
+      try {
+        await FileSystem.deleteAsync(fileUri, { idempotent: true });
+      } catch (e) {
+        console.warn('No se pudo borrar el archivo:', fileUri, e);
       }
     }
-  };
+  }
+};
 
   if (!id || !userToken) {
     return (
